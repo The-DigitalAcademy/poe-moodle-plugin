@@ -13,6 +13,7 @@ $tempzip = tempnam($CFG->tempdir . '/', 'poe');
 // $filelist = [];
 
 $html_guide = $course->get_html_guide();
+$filelist = [];
 
 foreach ($course->students as $student) {
 
