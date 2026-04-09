@@ -9,6 +9,7 @@ class poe_assignment {
     public string $name;
     public string $intro;
     public string $activity;
+    public $rubric;
 
     public function __construct(string $section, int $id, $name, $intro, $activity) {
         $this->section = $section;
@@ -22,6 +23,7 @@ class poe_assignment {
         $html = '<h2>' . $this->name . '</h2>';
         $html .= $this->intro;
         $html .= $this->activity;
+        // add rubric to html doc
         return  $html;
     }
 }
