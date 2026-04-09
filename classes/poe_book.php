@@ -19,6 +19,7 @@ class poe_book
         $this->id = $id;
         $this->name = $name;
         $this->intro = $intro;
+        $this->chapters = [];
     }
 
     public function to_html(): string
@@ -39,20 +40,20 @@ class poe_book_chapter
     public int $id;
     public int $page_number;
     public string $title;
-    public string $body;
+    public string $content;
 
-    public function __construct(int $id, $page_number, $title, $body)
+    public function __construct(int $id, $page_number, $title, $content)
     {
         $this->id = $id;
         $this->page_number = $page_number;
         $this->title = $title;
-        $this->body = $body;
+        $this->content = $content;
     }
 
     public function to_html(): string
     {
         $html = $this->title;
-        $html .= $this->body;
+        $html .= $this->content;
         return $html;
     }
 }

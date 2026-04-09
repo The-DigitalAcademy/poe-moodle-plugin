@@ -8,20 +8,20 @@ class poe_assignment {
     public string $section;
     public string $name;
     public string $intro;
-    public string $body;
+    public string $activity;
 
-    public function __construct(string $section, int $id, $name, $intro, $body) {
+    public function __construct(string $section, int $id, $name, $intro, $activity) {
         $this->section = $section;
         $this->id = $id;
         $this->name = $name;
         $this->intro = $intro;
-        $this->body = $body;
+        $this->activity = $activity;
     }
 
     public function to_html(): string {
         $html = '<h2>' . $this->name . '</h2>';
         $html .= $this->intro;
-        $html .= $this->body;
+        $html .= $this->activity;
         return  $html;
     }
 }
