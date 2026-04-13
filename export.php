@@ -14,6 +14,7 @@ $tempzip = tempnam($CFG->tempdir . '/', 'poe');
 
 $html_guide = $course->get_html_guide();
 $filelist = [];
+$fs = get_file_storage();
 
 foreach ($course->students as $student) {
 
@@ -23,6 +24,22 @@ foreach ($course->students as $student) {
     // add each assignment to each student's directory
     foreach ($course->assignments as $assignment) {
         $filelist["/{$student->name}/{$assignment->section}/{$assignment->name}/assignment.html"] = array($assignment->to_html());
+    }
+
+    // add each assignment submission to each student's directory
+    foreach ($student->assingment_submissions as $submission) {
+        // get course assignment related to submission
+        $found = array_filter($course->assignments, fn($assign) => $assign->id == $submission->assignmentid);
+        $assignment = reset($found);
+        // handle onlinetext submissions
+        if ($submission->type == 'onlinetext') {
+            $filelist["/{$student->name}/{$assignment->section}/{$assignment->name}/submission-{$submission->attempt}.html"] = array($submission->onlinetext);
+        } 
+        // handle file submissions
+        if ($submission->type == 'file') {
+            $stored_file = $fs->get_file_by_id($submission->fileid);
+            $filelist["/{$student->name}/{$assignment->section}/{$assignment->name}/submission/{$stored_file->get_filename()}"] = $stored_file;
+        }
     }
 
     // add each quiz to each student's directory

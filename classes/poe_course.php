@@ -1,8 +1,6 @@
 <?php
 namespace local_poe;
 
-use Exception;
-
 defined('MOODLE_INTERNAL') || die();
 
 class poe_course
@@ -31,6 +29,8 @@ class poe_course
         $this->students = $this->get_enrolled_students();
         $this->assignments = $this->get_assignments();
         $this->quizzes = $this->get_quizzes();
+
+        $this->set_student_assignment_submissions();
 
     }
 
@@ -182,8 +182,54 @@ class poe_course
         return $students;
     }
 
-    // protected function get_quizzes(): string
-    // {
+    /**
+     * Set each student's assignment submissions for each assignment in the course
+     * @return void
+     */
+    public function set_student_assignment_submissions() {
+        global $DB;
+        $sql = "
+            SELECT
+                s.id,
+                s.userid,
+                s.assignment,
+                s.status,
+                sot.onlinetext,
+                f.id AS fileid,
+                CASE 
+                    WHEN sot.id IS NOT NULL THEN 'onlinetext'
+                    WHEN f.id IS NOT NULL THEN 'file'
+                    ELSE NULL
+                END AS type
+            FROM {assign_submission} s
+            JOIN {assign} a
+                ON a.id = s.assignment 
+            LEFT JOIN {assignsubmission_onlinetext} sot
+                on sot.submission = s.id 
+            LEFT JOIN {files} f
+                ON f.itemid = s.id
+                AND f.component = 'assignsubmission_file'
+                AND f.filearea = 'submission_files'
+                AND f.filename <> '.'   
+            WHERE s.status = 'submitted' AND a.course = ?
+        ";
+        $records = $DB->get_records_sql($sql, [$this->id]);
 
-    // }
+        // group assignment submissions by userid for easy allocation to each student
+        $grouped = array_reduce($records, function ($carry, $item) {
+            // set content by submission type type
+            $content = null;
+            if ($item->type == 'onlinetext') $content = $item->onlinetext;
+            elseif ($item->type == 'file') $content = $item->fileid; 
+
+            // add submisssion to array as per userid key
+            $carry[$item->userid][] = new poe_assignment_submission($item->id, $item->type, $item->assignment, $content);
+            return $carry;
+        }, []);
+
+        // assign submissions to students
+        foreach ($this->students as $student) {
+            $student->assingment_submissions = $grouped[$student->id] ?? [];
+        }
+    }
 }
