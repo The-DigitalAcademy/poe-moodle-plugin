@@ -3,7 +3,7 @@ namespace local_poe;
 
 defined('MOODLE_INTERNAL') || die();
 
-class poe_quiz_questions {
+class poe_quiz_question {
     public int $id;
     public string $name;
     public string $questiontext;
