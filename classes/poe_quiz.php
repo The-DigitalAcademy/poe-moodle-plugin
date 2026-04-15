@@ -13,8 +13,8 @@ class poe_quiz {
     public function __construct(string $section, int $id, $name, $intro) {
         $this->section = $section;
         $this->id = $id;
-        $this->name = $name;
-        $this->intro = $intro;
+        $this->name = $name ?? '';;
+        $this->intro = $intro ?? '';;
     }
 
     public function to_html(): string {
