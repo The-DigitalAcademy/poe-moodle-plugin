@@ -18,8 +18,8 @@ class poe_page {
 
     public function to_html(): string {
         $html = '<h2>' . $this->name . '</h2>';
-        $html .= $this->intro;
-        $html .= $this->body;
+        $html .= '<div class="page-intro">' . $this->intro . '</div>';
+        $html .= '<div class="page-content">' . $this->body . '</div>';
         return  $html;
     }
 }

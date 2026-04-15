@@ -25,10 +25,10 @@ class poe_book
     public function to_html(): string
     {
         $html = '<h2>' . $this->name . '</h2>';
-        $html .= $this->intro;
+        $html .= '<div class="book-intro">' . $this->intro . '</div>';
 
         foreach ($this->chapters as $chapter) {
-            $html .= $chapter->to_html();
+            $html .= '<div class="chapter-container">' . $chapter->to_html() . '</div>';
         }
         
         return $html;
@@ -52,8 +52,8 @@ class poe_book_chapter
 
     public function to_html(): string
     {
-        $html = $this->title;
-        $html .= $this->content;
+        $html = '<div class="chapter-title">' . $this->title . '</div>';
+        $html .= '<div class="chapter-content">' . $this->content . '</div>';
         return $html;
     }
 }
