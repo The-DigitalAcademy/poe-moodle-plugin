@@ -19,6 +19,6 @@ echo html_writer::tag('h2', 'Export Course Portfolio');
 
 $exporturl = new moodle_url('/local/poe/export.php', ['id' => $courseid]);
 
-echo html_writer::link($exporturl, 'Download ZIP', ['class' => 'btn btn-primary']);
+echo html_writer::link($exporturl, 'Download ZIP', ['class' => 'btn btn-dark']);
 
 echo $OUTPUT->footer();

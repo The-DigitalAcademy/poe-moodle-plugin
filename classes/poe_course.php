@@ -77,7 +77,6 @@ class poe_course
             border-radius: 16px;
             margin-bottom: 40px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            border-bottom: 4px solid var(--accent-color);
         }
         .course-header h1 {
             margin: 0 0 16px 0;
