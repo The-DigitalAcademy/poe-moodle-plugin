@@ -102,11 +102,18 @@ class poe_course
         global $DB;
         $sql = "
             SELECT 
-                a.id,
+                grl.id AS id,
+                a.id AS assignment_id,
                 a.name,
                 a.intro,
                 a.activity,
-                cs.name AS section
+                cs.name AS section,
+                grc.id AS criteria_id,
+                grc.description AS criteria_description,
+                grc.sortorder AS criteria_sortorder,
+                grl.id AS level_id,
+                grl.score,
+                grl.definition AS level_definition
             FROM {course_modules} cm
             JOIN {modules} m 
                 ON m.id = cm.module
@@ -114,16 +121,45 @@ class poe_course
                 ON a.id = cm.instance
             JOIN {course_sections} cs 
                 ON cs.id = cm.section
+            LEFT JOIN {context} ctx
+                ON ctx.instanceid = cm.id AND ctx.contextlevel = 70
+            LEFT JOIN {grading_areas} ga
+                ON ga.contextid = ctx.id AND ga.component = 'mod_assign'
+            LEFT JOIN {grading_definitions} gd
+                ON gd.areaid = ga.id AND gd.method = 'rubric'
+            LEFT JOIN {gradingform_rubric_criteria} grc
+                ON grc.definitionid = gd.id
+            LEFT JOIN {gradingform_rubric_levels} grl
+                ON grl.criterionid = grc.id
             WHERE m.name = 'assign' AND cm.course = ?
+            ORDER BY a.id, grc.sortorder, grl.score
         ";
 
         $records = $DB->get_records_sql($sql, [$this->id]);
 
-        $assingments = array_map(function ($item) {
-            return new poe_assignment($item->section, $item->id, $item->name, $item->intro, $item->activity);
-        }, $records);
+        $assignments = [];
+        foreach ($records as $item) {
+            // create assignment if we haven't seen it yet
+            if (empty($assignments[$item->assignment_id])) {
+                $assignments[$item->assignment_id] = new poe_assignment(
+                    $item->section,
+                    $item->assignment_id,
+                    $item->name,
+                    $item->intro,
+                    $item->activity
+                );
+            }
+            // append rubric criterion/level if it exists
+            if (!empty($item->criteria_id)) {
+                $assignments[$item->assignment_id]->rubric[] = [
+                    'criteria'   => $item->criteria_description,
+                    'score'      => $item->score,
+                    'definition' => $item->level_definition,
+                ];
+            }
+        }
 
-        return $assingments;
+        return array_values($assignments);
     }
 
     /**
