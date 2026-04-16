@@ -11,9 +11,9 @@ class poe_page {
 
     public function __construct(int $id, $name, $intro, $body) {
         $this->id = $id;
-        $this->name = $name;
-        $this->intro = $intro;
-        $this->body = $body;
+        $this->name = $name ?? '';
+        $this->intro = $intro ?? '';
+        $this->body = $body?? '';
     }
 
     public function to_html(): string {
