@@ -24,6 +24,7 @@ class poe_assignment {
         $html .= $this->intro;
         $html .= $this->activity;
 
+        // rubric
         if (!empty($this->rubric)) {
             // group levels by criteria
             $criteria = [];
