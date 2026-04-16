@@ -47,13 +47,16 @@ class poe_course
     <title>' . htmlspecialchars($this->name) . ' - Learner Guide</title>
     <style>
         :root {
-            --primary-color: #2563eb;
+            --primary-color: #0f172a;
+            --accent-color: #3b82f6;
             --secondary-color: #64748b;
-            --bg-color: #f8fafc;
+            --bg-color: #f1f5f9;
             --card-bg: #ffffff;
             --text-main: #1e293b;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #f8fafc;
         }
         body {
             font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -68,21 +71,41 @@ class poe_course
             margin: 0 auto;
         }
         .course-header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
-            padding: 40px;
+            padding: 50px 40px;
             border-radius: 16px;
             margin-bottom: 40px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-bottom: 4px solid var(--accent-color);
         }
         .course-header h1 {
             margin: 0 0 16px 0;
             font-size: 2.5rem;
             font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+        pre, code {
+            font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            border-radius: 8px;
+        }
+        pre {
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            line-height: 1.45;
+            font-size: 0.95rem;
+        }
+        code {
+            padding: 2px 6px;
+            font-size: 0.9em;
         }
         .course-summary {
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             opacity: 0.9;
+            max-width: 700px;
         }
         .section-type-header {
             font-size: 1.5rem;
