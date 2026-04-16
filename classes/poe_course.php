@@ -1,8 +1,6 @@
 <?php
 namespace local_poe;
 
-use Exception;
-
 defined('MOODLE_INTERNAL') || die();
 
 class poe_course
@@ -23,16 +21,29 @@ class poe_course
     public array $quizzes;
     public string $summary;
 
+    /**
+     * @var poe_assignment_submission[]
+     */
+    protected array $assignment_submissions;
+
     public function __construct(int $id)
     {
         $course = get_course($id);
         $this->id = $course->id;
         $this->name = $course->fullname;
         $this->summary = $course->summary;
-        $this->students = $this->get_enrolled_students();
-        $this->assignments = $this->get_assignments();
-        $this->quizzes = $this->get_quizzes();
+        $this->students = poe_student::get_enrolled_students($this->id);
+        $this->assignments = poe_assignment::get_course_assignments($this->id);
+        $this->quizzes = poe_quiz::get_course_quizzes($this->id);
+        $this->assignment_submissions = poe_assignment_submission::get_course_assignment_submissions($this->id);
+    }
 
+
+    /**
+     * @return poe_assignment_submission[]
+     */
+    public function get_assignment_submissions(): array {
+        return $this->assignment_submissions;
     }
 
     public function get_html_guide(): string
@@ -213,97 +224,4 @@ class poe_course
 
         return $html;
     }
-
-    /**
-     * @return poe_assignment[] assignments
-     */
-    protected function get_assignments(): array
-    {
-        global $DB;
-        $sql = "
-            SELECT 
-                a.id,
-                a.name,
-                a.intro,
-                a.activity,
-                cs.name AS section
-            FROM {course_modules} cm
-            JOIN {modules} m 
-                ON m.id = cm.module
-            JOIN {assign} a
-                ON a.id = cm.instance
-            JOIN {course_sections} cs 
-                ON cs.id = cm.section
-            WHERE m.name = 'assign' AND cm.course = ?
-        ";
-
-        $records = $DB->get_records_sql($sql, [$this->id]);
-
-        $assingments = array_map(function ($item) {
-            return new poe_assignment($item->section, $item->id, $item->name, $item->intro, $item->activity);
-        }, $records);
-
-        return $assingments;
-    }
-
-    /**
-     * @return poe_quiz[] assignments
-     */
-    protected function get_quizzes(): array
-    {
-        global $DB;
-        $sql = "
-            SELECT 
-                q.id,
-                q.name,
-                q.intro,
-                cs.name AS section
-            FROM {course_modules} cm
-            JOIN {modules} m 
-                ON m.id = cm.module
-            JOIN {quiz} q
-                ON q.id = cm.instance
-            JOIN {course_sections} cs 
-                ON cs.id = cm.section
-            WHERE m.name = 'quiz' AND cm.course = ?
-        ";
-
-        $records = $DB->get_records_sql($sql, [$this->id]);
-
-        $quizzes = array_map(function ($item) {
-            return new poe_quiz($item->section, $item->id, $item->name, $item->intro);
-        }, $records);
-
-        return $quizzes;
-    }
-
-    protected function get_enrolled_students()
-    {
-        global $DB;
-
-        $sql = "
-            SELECT 
-                u.id,
-                u.firstname,
-                u.lastname
-            FROM {user_enrolments} ue
-            JOIN {enrol} e
-                ON e.id = ue.enrolid
-            JOIN {user} u 
-                ON u.id = ue.userid
-            WHERE e.courseid = ?
-        ";
-
-        $records = $DB->get_records_sql($sql, [$this->id]);
-
-        $students = array_map(function ($item) {
-            return new poe_student($item->id, "{$item->firstname} {$item->lastname}");
-        }, $records);
-        return $students;
-    }
-
-    // protected function get_quizzes(): string
-    // {
-
-    // }
 }
