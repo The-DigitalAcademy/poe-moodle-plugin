@@ -9,7 +9,7 @@ $context = context_course::instance($courseid);
 require_login($courseid, true);
 $PAGE->set_url('/local/poe/course.php', ['id' => $courseid]);
 $PAGE->set_pagelayout('incourse');
-$PAGE->set_title("POE | " . $course->name);
+$PAGE->set_title("POE | " . $course->fullname);
 $PAGE->set_heading($course->fullname);
 
 
