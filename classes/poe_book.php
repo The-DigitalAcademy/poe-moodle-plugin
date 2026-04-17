@@ -52,8 +52,7 @@ class poe_book_chapter
 
     public function to_html(): string
     {
-        $html = '<div class="chapter-title">' . $this->title . '</div>';
-        $html .= '<div class="chapter-content">' . $this->content . '</div>';
+        $html = '<div class="chapter-content">' . $this->content . '</div>';
         return $html;
     }
 }

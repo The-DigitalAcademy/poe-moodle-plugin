@@ -82,12 +82,11 @@ class poe_course
             margin: 0 auto;
         }
         .course-header {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: white;
-            padding: 50px 40px;
-            border-radius: 16px;
+            background: transparent;
+            color: var(--text-main);
+            padding: 40px 0;
             margin-bottom: 40px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-bottom: 2px solid var(--border-color);
         }
         .course-header h1 {
             margin: 0 0 16px 0;
