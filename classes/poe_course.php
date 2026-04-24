@@ -154,6 +154,40 @@ class poe_course
             font-weight: 600;
             margin-bottom: 16px;
         }
+        .section-container {
+            margin-top: 60px;
+            padding-bottom: 40px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .section-container:last-child {
+            border-bottom: none;
+        }
+        .section-header {
+            margin-bottom: 30px;
+            padding-left: 20px;
+            border-left: 4px solid var(--accent-color);
+        }
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin: 0 0 10px 0;
+            text-transform: capitalize;
+        }
+        .section-summary {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .module-label {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-color);
+            margin-bottom: 8px;
+        }
         img {
             max-width: 100%;
             height: auto;
@@ -168,55 +202,89 @@ class poe_course
             <div class="course-summary">' . $this->summary . '</div>
         </header>';
 
-        // PAGES
-        $page_records = $DB->get_records('page', ['course' => $this->id], '', 'id,name,intro,content');
-        if (!empty($page_records)) {
-            $html .= '<div class="section-type-header">Content Pages</div>';
-            $pages = array_map(function ($item) {
-                return new poe_page($item->id, $item->name, $item->intro, $item->content);
-            }, $page_records);
+        // Get all sections for the course
+        $sections = $DB->get_records('course_sections', ['course' => $this->id], 'section ASC');
 
-            foreach ($pages as $page) {
-                $html .= '<div class="content-card">' . $page->to_html() . '</div>';
-            }
-        }
-
-        // BOOKS
-        $books_sql = "
-            SELECT 
-                bc.id,
-                bc.bookid,
-                bc.pagenum,
-                bc.title,
-                bc.content,
-                b.name AS bookname,
-                b.intro AS bookintro
-            FROM {book_chapters} bc
-            JOIN {book} b
-                ON b.id = bc.bookid
-            WHERE b.course = ?
-        ";
-
-        $book_chapter_records = $DB->get_records_sql($books_sql, [$this->id]);
-        if (!empty($book_chapter_records)) {
-            $html .= '<div class="section-type-header">Books</div>';
-            /**
-             * @var array<int, poe_book> associative array. stores books by id
-             */
-            $books = [];
-
-            foreach ($book_chapter_records as $book_chapter) {
-                // create a book
-                if (empty($books[$book_chapter->bookid])) {
-                    $books[$book_chapter->bookid] = new poe_book($book_chapter->bookid, $book_chapter->bookname, $book_chapter->bookintro);
+        foreach ($sections as $section) {
+            // Skip section 0 if it has no name and summary (often used for general stuff)
+            // But usually we want to see it if it has content.
+            
+            // Get modules in this section
+            $modules_sql = "
+                SELECT cm.id, m.name as modname, cm.instance
+                FROM {course_modules} cm
+                JOIN {modules} m ON m.id = cm.module
+                WHERE cm.course = ? AND cm.section = ?
+                AND m.name IN ('page', 'book')
+            ";
+            
+            // Note: In Moodle, the order is determined by the 'sequence' field in course_sections.
+            // But get_records_sql without an explicit order might not be perfect.
+            // Let's follow the sequence field for 100% accuracy.
+            $section_modules = [];
+            if (!empty($section->sequence)) {
+                $cm_ids = explode(',', $section->sequence);
+                foreach ($cm_ids as $cm_id) {
+                    $mod_info = $DB->get_record_sql("
+                        SELECT cm.id, m.name as modname, cm.instance
+                        FROM {course_modules} cm
+                        JOIN {modules} m ON m.id = cm.module
+                        WHERE cm.id = ? AND m.name IN ('page', 'book')
+                    ", [$cm_id]);
+                    if ($mod_info) {
+                        $section_modules[] = $mod_info;
+                    }
                 }
-                //  add each chapter to a book
-                array_push($books[$book_chapter->bookid]->chapters, new poe_book_chapter($book_chapter->id, $book_chapter->pagenum, $book_chapter->title, $book_chapter->content));
             }
 
-            foreach ($books as $book) {
-                $html .= '<div class="content-card book-container">' . $book->to_html() . '</div>';
+            if (empty($section_modules) && empty(trim(strip_tags($section->summary))) && (empty($section->name) || $section->name == '')) {
+                continue;
             }
+
+            $section_name = !empty($section->name) ? $section->name : get_string('sectionname', 'format_topics') . ' ' . $section->section;
+            if ($section->section == 0 && empty($section->name)) {
+                $section_name = get_string('general');
+            }
+
+            $html .= '<section class="section-container">';
+            $html .= '<div class="section-header">';
+            $html .= '<h2 class="section-title">' . $section_name . '</h2>';
+            if (!empty($section->summary)) {
+                $context = \context_course::instance($this->id);
+                $formatted_summary = format_text($section->summary, $section->summaryformat, ['context' => $context]);
+                $html .= '<div class="section-summary">' . $formatted_summary . '</div>';
+            }
+            $html .= '</div>';
+
+            foreach ($section_modules as $mod) {
+                if ($mod->modname == 'page') {
+                    $page_record = $DB->get_record('page', ['id' => $mod->instance]);
+                    if ($page_record) {
+                        $page = new poe_page($page_record->id, $page_record->name, $page_record->intro, $page_record->content);
+                        $html .= '<div class="content-card">';
+                        $html .= '<span class="module-label">Page</span>';
+                        $html .= $page->to_html();
+                        $html .= '</div>';
+                    }
+                } else if ($mod->modname == 'book') {
+                    $book_record = $DB->get_record('book', ['id' => $mod->instance]);
+                    if ($book_record) {
+                        $book = new poe_book($book_record->id, $book_record->name, $book_record->intro);
+                        
+                        // Fetch chapters for this book
+                        $chapters = $DB->get_records('book_chapters', ['bookid' => $book_record->id], 'pagenum ASC');
+                        foreach ($chapters as $chapter) {
+                            $book->chapters[] = new poe_book_chapter($chapter->id, $chapter->pagenum, $chapter->title, $chapter->content);
+                        }
+                        
+                        $html .= '<div class="content-card book-container">';
+                        $html .= '<span class="module-label">Book</span>';
+                        $html .= $book->to_html();
+                        $html .= '</div>';
+                    }
+                }
+            }
+            $html .= '</section>';
         }
 
         $html .= '</div></body></html>';
