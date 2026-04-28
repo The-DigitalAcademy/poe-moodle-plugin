@@ -41,6 +41,10 @@ foreach ($course->get_assignment_submissions() as $submission) {
         $filelist["/{$submission->get_student_fullname()}/{$submission->get_course_section_name()}/{$submission->get_assignment_name()}/submission/{$stored_file->get_filename()}"] = $stored_file;
     }
 }
+// add each quiz attempt to the respective student's directory
+foreach ($course->get_quiz_attempts() as $qattempt) {
+    $filelist["/{$qattempt->get_username()}/{$qattempt->get_sectionname()}/{$qattempt->get_quizname()}/attempt-{$qattempt->get_attemptnumber()}.html"] = array($qattempt->to_html());
+}
 
 // zip files
 $zipper = new zip_packer();
