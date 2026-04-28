@@ -24,6 +24,7 @@ class poe_book
 
     public function to_html(): string
     {
+            $html = poe_renderer::get_styles();
         $html = '<h2>' . $this->name . '</h2>';
         $html .= '<div class="book-intro">' . $this->intro . '</div>';
 

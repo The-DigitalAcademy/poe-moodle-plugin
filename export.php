@@ -27,8 +27,7 @@ foreach ($course->students as $student) {
     ];
 
     /**
-     * 🔥 UPDATED ASSIGNMENTS (ONLY CHANGE)
-     * Pass student + course name
+     * ASSIGNMENTS (with metadata)
      */
     foreach ($course->assignments as $assignment) {
         $filelist["/{$studentname}/{$assignment->get_course_section_name()}/{$assignment->get_name()}/assignment.html"] = [
@@ -37,7 +36,7 @@ foreach ($course->students as $student) {
     }
 
     /**
-     * QUIZ (UNCHANGED)
+     * QUIZZES
      */
     foreach ($course->quizzes as $quiz) {
         $filelist["/{$studentname}/{$quiz->get_course_section_name()}/{$quiz->get_name()}/quiz.html"] = [
@@ -47,23 +46,30 @@ foreach ($course->students as $student) {
 }
 
 /**
- * 🔥 KEEP TEAMMATE FEATURE (DO NOT TOUCH)
- * Assignment submissions (files + attempts)
+ * 🔥 UPDATED: Assignment submissions (HTML + files)
  */
 foreach ($course->get_assignment_submissions() as $submission) {
 
     $studentname = $submission->get_student_fullname();
 
+    $basepath = "/{$studentname}/{$submission->get_course_section_name()}/{$submission->get_assignment_name()}";
+
+    // 🔥 CLEAN HTML EXPORT (UPDATED)
     if ($submission->has_onlinetext()) {
-        $filelist["/{$studentname}/{$submission->get_course_section_name()}/{$submission->get_assignment_name()}/submission-{$submission->get_attemptnumber()}/onlinetext.html"] = [
-            $submission->get_onlinetext()
+
+        $filelist["{$basepath}/submission-{$submission->get_attemptnumber()}/onlinetext.html"] = [
+            $submission->to_html() //  KEY FIX
         ];
     }
 
+    // 🔥 FILE EXPORT (UNCHANGED)
     if ($submission->has_file()) {
+
         $stored_file = $fs->get_file_by_id($submission->get_fileid());
 
-        $filelist["/{$studentname}/{$submission->get_course_section_name()}/{$submission->get_assignment_name()}/submission/{$stored_file->get_filename()}"] = $stored_file;
+        if ($stored_file) {
+            $filelist["{$basepath}/submission/{$stored_file->get_filename()}"] = $stored_file;
+        }
     }
 }
 

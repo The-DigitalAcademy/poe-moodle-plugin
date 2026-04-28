@@ -23,36 +23,46 @@ class poe_quiz_question {
         $this->name = $name ?? '';
         $this->questiontext = $questiontext ?? '';
         $this->qtype = $qtype ?? '';
-        $this->mark = $mark ?? '';
-        $this->answers = $answers ?? '';
+       $this->mark = $mark ?? 0;
+$this->answers = $answers ?? [];
     }
+public function to_html(int $index): string {
 
-    public function to_html(int $index): string {
-        $html = '<div class="quiz-question">';
-        $html .= '<h4>Question ' . $index . '</h4>';
-        $html .= '<p><strong>Type:</strong> ' . ucfirst($this->qtype) . '</p>';
-        $html .= '<p><strong>Marks:</strong> ' . $this->mark . '</p>';
-        $html .= '<div>' . $this->questiontext . '</div>';
+    // 🔥 Clean question text (remove numbering + HTML tags)
+    $cleanText = preg_replace('/^\d+\.\s*/', '', strip_tags($this->questiontext));
 
-        // Multiple Choice / True False / Short Answer options
-        if (!empty($this->answers)) {
-            $html .= '<ul>';
+    $html = '<div class="quiz-question">';
+    $html .= '<h4>Question ' . $index . '</h4>';
 
-            foreach ($this->answers as $answer) {
-                $html .= '<li>' . $answer . '</li>';
-            }
+    // Optional: hide type if you don't want it visible
+    $html .= '<p><strong>Marks:</strong> ' . $this->mark . '</p>';
 
-            $html .= '</ul>';
+    $html .= '<div class="question-text"><strong>' . $cleanText . '</strong></div>';
+
+    // 🔥 Answer formatting
+    if (!empty($this->answers)) {
+
+        $html .= '<ul class="answers">';
+
+        $labels = ['A', 'B', 'C', 'D', 'E'];
+
+        foreach ($this->answers as $i => $answer) {
+
+            $cleanAnswer = strip_tags($answer);
+
+            $html .= '<li><strong>' . ($labels[$i] ?? '') . '.</strong> ' . $cleanAnswer . '</li>';
         }
 
-        // Essay questions usually do not have predefined answers
-        if ($this->qtype === 'essay') {
-            $html .= '<p><em>Learner must provide a written response.</em></p>';
-        }
-
-        $html .= '<hr>';
-        $html .= '</div>';
-
-        return $html;
+        $html .= '</ul>';
     }
+
+    // Essay handling
+    if ($this->qtype === 'essay') {
+        $html .= '<p><em>Learner must provide a written response.</em></p>';
+    }
+
+    $html .= '</div><hr>';
+
+    return $html;
+}
 }

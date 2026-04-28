@@ -21,7 +21,7 @@ class poe_assignment {
     }
 
     /**
-     * 🔥 NEW: Get student submission (online text)
+     * Get student submission (safe null handling)
      */
     public function get_student_submission(int $userid): ?\stdClass {
         global $DB;
@@ -35,109 +35,99 @@ class poe_assignment {
                 a.duedate,
                 at.onlinetext
             FROM {assign_submission} s
-            JOIN {assign} a
-                ON a.id = s.assignment
-            LEFT JOIN {assignsubmission_onlinetext} at
-                ON at.submission = s.id
+            JOIN {assign} a ON a.id = s.assignment
+            LEFT JOIN {assignsubmission_onlinetext} at ON at.submission = s.id
             WHERE s.assignment = ?
               AND s.userid = ?
               AND s.status = 'submitted'
         ";
 
-        return $DB->get_record_sql($sql, [$this->id, $userid]);
+        $record = $DB->get_record_sql($sql, [$this->id, $userid]);
+
+        return $record ?: null;
     }
 
     /**
-     * 🔥 UPDATED: Render assignment + rubric + submission + metadata
+     * Render assignment HTML (final clean version)
      */
     public function to_html(poe_student $student = null, string $coursename = ''): string {
 
-        // ✅ Styling (uniform output)
-        $html = '
-        <style>
-            body { font-family: Arial, sans-serif; }
-            .assignment-block { padding: 20px; }
-            .metadata {
-                background: #f5f5f5;
-                padding: 15px;
-                margin-bottom: 20px;
-                border-left: 5px solid #0073e6;
-            }
-            .metadata p { margin: 5px 0; }
-            .submission-content {
-                padding: 15px;
-                background: #ffffff;
-                border: 1px solid #ddd;
-            }
-        </style>
-        ';
+        // 🔥 Centralized styling
+        $html = poe_renderer::get_styles();
 
         $html .= '<div class="assignment-block">';
         $html .= '<h2>' . format_string($this->name) . '</h2>';
-        $html .= $this->intro;
-        $html .= $this->activity;
+
+        // 🔥 Safe HTML rendering
+        $html .= '<div class="assignment-intro">' . format_text($this->intro, FORMAT_HTML) . '</div>';
+        $html .= '<div class="assignment-activity">' . format_text($this->activity, FORMAT_HTML) . '</div>';
 
         /**
-         * ✅ EXISTING FEATURE: RUBRIC (UNCHANGED)
+         * 🔥 RUBRIC
          */
         if (!empty($this->rubric)) {
+
             $criteria = [];
 
             foreach ($this->rubric as $row) {
                 $criteria[$row['criteria']][] = [
                     'definition' => $row['definition'],
-                    'score'      => (int) $row['score'],
+                    'score' => (int)$row['score'],
                 ];
             }
 
             $html .= '<h3>Rubric</h3>';
-            $html .= '<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse; width:100%;">';
+            $html .= '<table class="rubric-table">';
 
-            $i = 0;
             foreach ($criteria as $criteria_name => $levels) {
-                $bg = ($i % 2 === 0) ? '#f2f2f2' : '#ffffff';
 
-                $html .= '<tr style="background-color:' . $bg . ';">';
+                $html .= '<tr>';
                 $html .= '<td><strong>' . $criteria_name . '</strong></td>';
 
                 foreach ($levels as $level) {
                     $html .= '<td>';
-                    $html .= $level['definition'] . '<br>';
-                    $html .= '<span style="color: green;">' . $level['score'] . ' points</span>';
+                    $html .= $level['definition'];
+                    $html .= '<br><span class="points">' . $level['score'] . ' pts</span>';
                     $html .= '</td>';
                 }
 
                 $html .= '</tr>';
-                $i++;
             }
 
             $html .= '</table>';
         }
 
         /**
-         * 🔥 NEW FEATURE: STUDENT SUBMISSION + METADATA
+         * 🔥 SUBMISSION + METADATA
          */
         if ($student) {
-            $submission = $this->get_student_submission($student->id);
+
+            $submission = $this->get_student_submission($student->get_id());
 
             if ($submission) {
 
                 $html .= '<div class="metadata">';
-                $html .= '<p><strong>Student:</strong> ' . $student->name . '</p>';
+                $html .= '<h3>Submission Details</h3>';
+
+                $html .= '<p><strong>Student:</strong> ' . $student->get_fullname() . '</p>';
                 $html .= '<p><strong>Course:</strong> ' . $coursename . '</p>';
                 $html .= '<p><strong>Module:</strong> ' . $this->get_course_section_name() . '</p>';
                 $html .= '<p><strong>Assignment:</strong> ' . $this->name . '</p>';
+                $html .= '<p><strong>Status:</strong> Submitted</p>';
 
                 $html .= '<p><strong>Written:</strong> ' . userdate($submission->timecreated) . '</p>';
                 $html .= '<p><strong>Submitted:</strong> ' . userdate($submission->timemodified) . '</p>';
-
                 $html .= '<p><strong>Deadline:</strong> ' . ($submission->duedate ? userdate($submission->duedate) : 'N/A') . '</p>';
                 $html .= '<p><strong>Venue:</strong> LMS (Online)</p>';
+
                 $html .= '</div>';
 
                 $html .= '<div class="submission-content">';
                 $html .= '<h3>Submission</h3>';
-                $html .= format_text($submission->onlinetext ?? '', FORMAT_HTML);
+
+                $cleanSubmission = format_text($submission->onlinetext ?? '', FORMAT_HTML);
+                $html .= $cleanSubmission ?: '<em>No content submitted</em>';
+
                 $html .= '</div>';
 
             } else {
@@ -150,54 +140,11 @@ class poe_assignment {
         return $html;
     }
 
-    /**
-     * EXISTING HELPERS (UNCHANGED)
-     */
     public function get_name(): string {
         return $this->name;
     }
 
     public function get_course_section_name(): string {
         return $this->course_module->get_course_section_name();
-    }
-
-    /**
-     * ⚠️ DO NOT MODIFY — KEEP YOUR TEAMMATE'S ORIGINAL QUERY
-     */
-    public static function get_course_assignments(int $courseid): array {
-        global $DB;
-
-        $sql = "
-            SELECT 
-                a.id,
-                a.name,
-                a.intro,
-                a.activity,
-                cm.id as cmid
-            FROM {course_modules} cm
-            JOIN {modules} m ON m.id = cm.module
-            JOIN {assign} a ON a.id = cm.instance
-            WHERE m.name = 'assign' AND cm.course = ?
-        ";
-
-        $records = $DB->get_records_sql($sql, [$courseid]);
-
-        $assignments = [];
-
-        foreach ($records as $record) {
-            $cm = new poe_course_module($record->cmid);
-
-            $assignment = new poe_assignment(
-                $cm,
-                $record->id,
-                $record->name,
-                $record->intro,
-                $record->activity
-            );
-
-            $assignments[] = $assignment;
-        }
-
-        return $assignments;
     }
 }
