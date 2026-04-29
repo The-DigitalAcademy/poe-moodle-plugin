@@ -24,6 +24,16 @@ foreach ($course->students as $student) {
     // ASSIGNMENT
     foreach ($course->assignments as $assignment) {
         $filelist["/{$student->get_fullname()}/{$assignment->get_course_section_name()}/{$assignment->get_name()}/assignment.html"] = array($assignment->to_html());
+
+        $grade = \local_poe\poe_assignment_grade::get_for_student(
+            $assignment->get_id(),
+            $student->get_id(),
+            $assignment->get_maxgrade(),
+            $assignment->rubric
+        );
+        if ($grade !== null) {
+            $filelist["/{$student->get_fullname()}/{$assignment->get_course_section_name()}/{$assignment->get_name()}/grading.html"] = array($grade->to_html());
+        }
     }
     // QUIZ
     foreach ($course->quizzes as $quiz) {
