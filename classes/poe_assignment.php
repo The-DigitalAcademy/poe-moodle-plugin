@@ -10,13 +10,23 @@ class poe_assignment {
     protected string $intro;
     protected string $activity;
     public array $rubric = [];
+    protected float $maxgrade;
 
-    public function __construct(poe_course_module $cm, $id, $name, $intro, $activity) {
+    public function __construct(poe_course_module $cm, $id, $name, $intro, $activity, float $maxgrade = 0) {
         $this->course_module = $cm;
         $this->id = $id;
         $this->name = $name;
         $this->intro = $intro;
         $this->activity = $activity;
+        $this->maxgrade = $maxgrade;
+    }
+
+    public function get_id(): int {
+        return $this->id;
+    }
+
+    public function get_maxgrade(): float {
+        return $this->maxgrade;
     }
 
     public function to_html(): string {
@@ -82,6 +92,7 @@ class poe_assignment {
                 a.name AS a_name,
                 a.intro AS a_intro,
                 a.activity AS a_activity,
+                a.grade AS a_maxgrade,
                 cs.id AS cs_id,
                 cs.name AS cs_name,
                 cs.section AS cs_number,
@@ -141,7 +152,8 @@ class poe_assignment {
                     $record->assignment_id,
                     $record->a_name,
                     $record->a_intro,
-                    $record->a_activity
+                    $record->a_activity,
+                    (float)$record->a_maxgrade
                 );
             }
 

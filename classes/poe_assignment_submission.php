@@ -75,6 +75,7 @@ class poe_assignment_submission
                 a.name AS a_name,
                 a.intro AS a_intro,
                 a.activity AS a_activity,
+                a.grade AS a_maxgrade,
                 u.id AS u_id,
                 u.firstname AS u_firstname,
                 u.lastname AS u_lastname,
@@ -134,7 +135,7 @@ class poe_assignment_submission
             //  create assignment
             if (empty($assignments[$record->a_id])) {
                 $cm = $course_modules[$record->cm_id];
-                $assignments[$record->a_id] = new poe_assignment($cm, $record->a_id, $record->a_name, $record->a_intro, $record->a_activity);
+                $assignments[$record->a_id] = new poe_assignment($cm, $record->a_id, $record->a_name, $record->a_intro, $record->a_activity, (float)$record->a_maxgrade);
             }
 
             // create student
