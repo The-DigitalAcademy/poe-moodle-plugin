@@ -202,8 +202,43 @@ class poe_course
             <div class="course-summary">' . $this->summary . '</div>
         </header>';
 
-        // Get all sections for the course
-        $sections = $DB->get_records('course_sections', ['course' => $this->id], 'section ASC');
+        // Fetch all sections to handle Moodle 4.3+ subsections correctly
+        $all_sections = $DB->get_records('course_sections', ['course' => $this->id], 'section ASC');
+        $sections = [];
+
+        // Build the correct visual order by interleaving root sections with their delegated subsections
+        foreach ($all_sections as $sec) {
+            // Root sections have no component or an empty component
+            if (!isset($sec->component) || empty($sec->component)) {
+                $sections[] = $sec;
+                
+                // If this root section contains subsection modules, append them in sequence
+                if (!empty($sec->sequence)) {
+                    $cm_ids = explode(',', $sec->sequence);
+                    foreach ($cm_ids as $cm_id) {
+                        $cm_id = trim($cm_id);
+                        if ($cm_id === '') continue;
+                        
+                        $mod_info = $DB->get_record_sql("
+                            SELECT cm.id, m.name as modname, cm.instance
+                            FROM {course_modules} cm
+                            JOIN {modules} m ON m.id = cm.module
+                            WHERE cm.id = ? AND m.name = 'subsection'
+                        ", [(int)$cm_id]);
+                        
+                        if ($mod_info) {
+                            // Find the delegated course_section for this subsection
+                            foreach ($all_sections as $sub_sec) {
+                                if (isset($sub_sec->component) && $sub_sec->component === 'mod_subsection' && $sub_sec->itemid == $mod_info->instance) {
+                                    $sections[] = $sub_sec;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         foreach ($sections as $section) {
             // Skip section 0 if it has no name and summary (often used for general stuff)
