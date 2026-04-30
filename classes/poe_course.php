@@ -25,6 +25,10 @@ class poe_course
      * @var poe_assignment_submission[]
      */
     protected array $assignment_submissions;
+    /**
+     * @var poe_quiz_attempt[]
+     */
+    protected array $quiz_attempts;
 
     public function __construct(int $id)
     {
@@ -36,6 +40,7 @@ class poe_course
         $this->assignments = poe_assignment::get_course_assignments($this->id);
         $this->quizzes = poe_quiz::get_course_quizzes($this->id);
         $this->assignment_submissions = poe_assignment_submission::get_course_assignment_submissions($this->id);
+        $this->quiz_attempts = poe_quiz_attempt::get_all_quiz_attempts($this->id);
     }
 
 
@@ -44,6 +49,13 @@ class poe_course
      */
     public function get_assignment_submissions(): array {
         return $this->assignment_submissions;
+    }
+
+    /**
+     * @return poe_quiz_attempt[]
+     */
+    public function get_quiz_attempts(): array {
+        return $this->quiz_attempts;
     }
 
     public function get_html_guide(): string
