@@ -30,9 +30,17 @@ foreach ($course->students as $student) {
      * ASSIGNMENTS (with metadata)
      */
     foreach ($course->assignments as $assignment) {
-        $filelist["/{$studentname}/{$assignment->get_course_section_name()}/{$assignment->get_name()}/assignment.html"] = [
-            $assignment->to_html($student, $course->name)
-        ];
+        $filelist["/{$student->get_fullname()}/{$assignment->get_course_section_name()}/{$assignment->get_name()}/assignment.html"] = array($assignment->to_html());
+
+        $grade = \local_poe\poe_assignment_grade::get_for_student(
+            $assignment->get_id(),
+            $student->get_id(),
+            $assignment->get_maxgrade(),
+            $assignment->rubric
+        );
+        if ($grade !== null) {
+            $filelist["/{$student->get_fullname()}/{$assignment->get_course_section_name()}/{$assignment->get_name()}/grading.html"] = array($grade->to_html());
+        }
     }
 
     /**
@@ -71,6 +79,10 @@ foreach ($course->get_assignment_submissions() as $submission) {
             $filelist["{$basepath}/submission/{$stored_file->get_filename()}"] = $stored_file;
         }
     }
+}
+// add each quiz attempt to the respective student's directory
+foreach ($course->get_quiz_attempts() as $qattempt) {
+    $filelist["/{$qattempt->get_username()}/{$qattempt->get_sectionname()}/{$qattempt->get_quizname()}/attempt-{$qattempt->get_attemptnumber()}.html"] = array($qattempt->to_html());
 }
 
 // zip files

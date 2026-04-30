@@ -19,11 +19,9 @@ class poe_student {
         return $this->id;
     }
 
-    public function get_fullname(): string {
-        return "{$this->firstname} {$this->lastname}";
-    }
+  
 
-    public static function get_enrolled_students(int $courseid): array {
+    static function get_enrolled_students(int $courseid): array {
         global $DB;
 
         $students = [];
