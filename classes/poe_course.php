@@ -209,28 +209,23 @@ class poe_course
             // Skip section 0 if it has no name and summary (often used for general stuff)
             // But usually we want to see it if it has content.
             
-            // Get modules in this section
-            $modules_sql = "
-                SELECT cm.id, m.name as modname, cm.instance
-                FROM {course_modules} cm
-                JOIN {modules} m ON m.id = cm.module
-                WHERE cm.course = ? AND cm.section = ?
-                AND m.name IN ('page', 'book')
-            ";
-            
-            // Note: In Moodle, the order is determined by the 'sequence' field in course_sections.
-            // But get_records_sql without an explicit order might not be perfect.
-            // Let's follow the sequence field for 100% accuracy.
+            // In Moodle, the authoritative display order of modules within a section is
+            // stored in course_sections.sequence (a comma-separated list of cm IDs).
+            // This is exactly what Moodle's own course page uses to render activities.
             $section_modules = [];
             if (!empty($section->sequence)) {
                 $cm_ids = explode(',', $section->sequence);
                 foreach ($cm_ids as $cm_id) {
+                    $cm_id = trim($cm_id);
+                    if ($cm_id === '') {
+                        continue;
+                    }
                     $mod_info = $DB->get_record_sql("
                         SELECT cm.id, m.name as modname, cm.instance
                         FROM {course_modules} cm
                         JOIN {modules} m ON m.id = cm.module
                         WHERE cm.id = ? AND m.name IN ('page', 'book')
-                    ", [$cm_id]);
+                    ", [(int)$cm_id]);
                     if ($mod_info) {
                         $section_modules[] = $mod_info;
                     }
