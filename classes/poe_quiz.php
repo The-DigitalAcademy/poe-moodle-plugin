@@ -81,6 +81,7 @@ class poe_quiz {
     }
 
     public function to_html(): string {
+            $html = poe_renderer::get_styles();
         $html = '<h2>' . format_string($this->name) . '</h2>';
         $html .= $this->intro;
 
@@ -96,6 +97,7 @@ class poe_quiz {
 
         return $html;
     }
+    
     public function get_name():string {
         return $this->name;
     }
