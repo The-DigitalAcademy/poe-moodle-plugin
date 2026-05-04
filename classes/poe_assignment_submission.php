@@ -30,7 +30,72 @@ class poe_assignment_submission {
         $this->onlinetext = $onlinetext ?? '';
         $this->fileid = $fileid;
     }
+public static function get_course_assignment_submissions(int $courseid): array {
+    global $DB;
 
+    $sql = "
+        SELECT 
+            s.id,
+            s.userid,
+            s.assignment,
+            s.timecreated,
+            s.timemodified,
+            s.attemptnumber,
+
+            a.name AS assignmentname,
+            cs.name AS sectionname,
+
+            u.firstname,
+            u.lastname,
+
+            at.onlinetext,
+            f.id AS fileid
+
+        FROM {assign_submission} s
+
+        JOIN {assign} a 
+            ON a.id = s.assignment
+
+        JOIN {course_modules} cm 
+            ON cm.instance = a.id
+
+        JOIN {course_sections} cs 
+            ON cs.id = cm.section
+
+        JOIN {user} u 
+            ON u.id = s.userid
+
+        LEFT JOIN {assignsubmission_onlinetext} at 
+            ON at.submission = s.id
+
+        LEFT JOIN {files} f 
+            ON f.itemid = s.id
+
+        WHERE a.course = ?
+          AND s.status = 'submitted'
+    ";
+
+    $records = $DB->get_records_sql($sql, [$courseid]);
+
+    $submissions = [];
+
+    foreach ($records as $record) {
+
+        $studentname = "{$record->firstname} {$record->lastname}";
+
+        $submissions[] = new poe_assignment_submission(
+            $record->userid,
+            $studentname,
+            $record->sectionname ?? '',
+            $record->assignmentname ?? '',
+            $record->attemptnumber ?? 0,
+            $record->onlinetext ?? '',
+            $record->fileid ?? null
+        );
+    }
+
+    return $submissions;
+}
     /**
      * 🔥 Render submission as full HTML document
      */

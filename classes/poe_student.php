@@ -4,9 +4,11 @@ namespace local_poe;
 defined('MOODLE_INTERNAL') || die();
 
 class poe_student {
+
     protected int $id;
     protected string $firstname;
     protected string $lastname;
+
     protected array $quiz_submissions = [];
 
     public function __construct(int $id, string $firstname, string $lastname) {
@@ -19,9 +21,28 @@ class poe_student {
         return $this->id;
     }
 
-  
+    /**
+     * 🔥 REQUIRED (used everywhere)
+     */
+    public function get_fullname(): string {
+        return trim("{$this->firstname} {$this->lastname}");
+    }
 
-    static function get_enrolled_students(int $courseid): array {
+    /**
+     * OPTIONAL (nice for debugging / extensions)
+     */
+    public function get_firstname(): string {
+        return $this->firstname;
+    }
+
+    public function get_lastname(): string {
+        return $this->lastname;
+    }
+
+    /**
+     * 🔥 STATIC LOADER
+     */
+    public static function get_enrolled_students(int $courseid): array {
         global $DB;
 
         $students = [];
