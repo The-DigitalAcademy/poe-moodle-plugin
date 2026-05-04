@@ -33,6 +33,8 @@ class poe_assignment_submission {
 public static function get_course_assignment_submissions(int $courseid): array {
     global $DB;
 
+    $prefixes = poe_course::get_section_prefixes($courseid);
+
     $sql = "
         SELECT 
             s.id,
@@ -43,6 +45,7 @@ public static function get_course_assignment_submissions(int $courseid): array {
             s.attemptnumber,
 
             a.name AS assignmentname,
+            cs.id AS sectionid,
             cs.name AS sectionname,
 
             u.firstname,
@@ -82,11 +85,16 @@ public static function get_course_assignment_submissions(int $courseid): array {
     foreach ($records as $record) {
 
         $studentname = "{$record->firstname} {$record->lastname}";
+        
+        $sectionname = $record->sectionname ?? '';
+        if (isset($prefixes[$record->sectionid])) {
+            $sectionname = $prefixes[$record->sectionid] . '_' . $sectionname;
+        }
 
         $submissions[] = new poe_assignment_submission(
             $record->userid,
             $studentname,
-            $record->sectionname ?? '',
+            $sectionname,
             $record->assignmentname ?? '',
             $record->attemptnumber ?? 0,
             $record->onlinetext ?? '',
