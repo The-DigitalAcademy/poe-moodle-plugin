@@ -384,7 +384,11 @@ class poe_course
             }
             $html .= '</section>';
         }
-
+            
         return $html;
     }
+        }
+    }
+        
+        
 }
