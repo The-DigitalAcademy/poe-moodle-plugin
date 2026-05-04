@@ -61,63 +61,6 @@ class poe_course
     {
         global $DB;
 
-        $html = "<h1>Guide Book</h1>";
-
-        // PAGES
-        $pages = $DB->get_records('page', ['course' => $this->id]);
-
-        foreach ($pages as $p) {
-            $page = new poe_page(
-                $p->id,
-                $p->name,
-                $p->intro ?? '',
-                $p->content ?? ''
-            );
-
-            $html .= $page->to_html();
-        }
-
-        // BOOKS
-        $books_sql = "
-            SELECT 
-                bc.id,
-                bc.bookid,
-                bc.pagenum,
-                bc.title,
-                bc.content,
-                b.name AS bookname,
-                b.intro AS bookintro
-            FROM {book_chapters} bc
-            JOIN {book} b ON b.id = bc.bookid
-            WHERE b.course = ?
-        ";
-
-        $chapters = $DB->get_records_sql($books_sql, [$this->id]);
-
-        if (!empty($chapters)) {
-
-            $books = [];
-
-            foreach ($chapters as $ch) {
-
-                if (empty($books[$ch->bookid])) {
-                    $books[$ch->bookid] = new poe_book(
-                        $ch->bookid,
-                        $ch->bookname ?? '',
-                        $ch->bookintro ?? ''
-                    );
-                }
-
-                $books[$ch->bookid]->chapters[] = new poe_book_chapter(
-                    $ch->id,
-                    $ch->pagenum,
-                    $ch->title ?? '',
-                    $ch->content ?? ''
-                );
-            }
-
-            foreach ($books as $book) {
-                $html .= $book->to_html();
         $html = '<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -384,11 +327,9 @@ class poe_course
             }
             $html .= '</section>';
         }
+
+        $html .= '</div></body></html>';
             
         return $html;
     }
-        }
-    }
-        
-        
 }
