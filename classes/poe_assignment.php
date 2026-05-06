@@ -164,9 +164,6 @@ class poe_assignment {
      */
     static function get_course_assignments(int $courseid): array {
         global $DB;
-
-        $prefixes = poe_course::get_section_prefixes($courseid);
-
         $sql = "
             SELECT 
                 grl.id AS id,
@@ -217,8 +214,7 @@ class poe_assignment {
         foreach ($records as $record) {
             // create course section
             if (empty($course_sections[$record->cs_id])) {
-                $prefix = $prefixes[$record->cs_id] ?? '';
-                $course_sections[$record->cs_id] = new poe_course_section($record->cs_id, $record->cs_name, $record->cs_number, $record->cs_summary, $record->cs_cm_sequence, $prefix);
+                $course_sections[$record->cs_id] = new poe_course_section($record->cs_id, $record->cs_name, $record->cs_number, $record->cs_summary, $record->cs_cm_sequence);
             }
 
             //  create course module

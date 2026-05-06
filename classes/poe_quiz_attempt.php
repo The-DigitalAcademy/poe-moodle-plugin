@@ -104,14 +104,10 @@ class poe_quiz_attempt {
 
     static function get_all_quiz_attempts(int $courseid) {
         global $DB;
-
-        $prefixes = poe_course::get_section_prefixes($courseid);
-
         $qa_sql = "
             SELECT qa.id, qa.state, qa.timestart, qa.timefinish, qa.sumgrades, qa.attempt, qa.uniqueid,
                     u.firstname, u.lastname,
                     q.name AS quizname,
-                    cs.id AS sectionid,
                     cs.name AS sectionname
             FROM {quiz_attempts} qa 
             JOIN {user} u ON u.id = qa.userid
@@ -130,12 +126,7 @@ class poe_quiz_attempt {
         foreach ($qa_records as $value) {
             $qa = new poe_quiz_attempt($value->state, $value->timestart, $value->timefinish, $value->attempt, $value->sumgrades);
             $qa->set_student($value->firstname . " " . $value->lastname);
-
-            $sectionname = $value->sectionname;
-            if (isset($prefixes[$value->sectionid])) {
-                $sectionname = $prefixes[$value->sectionid] . '_' . $sectionname;
-            }
-            $qa->set_sectionname($sectionname);
+            $qa->set_sectionname($value->sectionname);
             $qa->set_quizname($value->quizname);
             $qa->set_question_attempts(array_filter($question_attempts, fn($val) => $val->get_usageid() == $value->uniqueid));
 
