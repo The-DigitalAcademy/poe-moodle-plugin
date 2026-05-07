@@ -13,6 +13,7 @@ $course = new poe_course($courseid);
 $tempzip = tempnam($CFG->tempdir . '/', 'poe');
 
 $html_guide = $course->get_html_guide();
+$pdf_guide  = $course->get_pdf_guide();
 $filelist = [];
 $fs = get_file_storage();
 
@@ -25,7 +26,8 @@ foreach ($course->students as $student) {
     $filelist["/{$studentname}/learner_guide.html"] = [
         $html_guide
     ];
-
+    $filelist["/{$studentname}/learner_guide.pdf"]  = [$pdf_guide];
+    
     /**
      * ASSIGNMENTS (with metadata)
      */
