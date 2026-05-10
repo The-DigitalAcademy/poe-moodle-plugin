@@ -77,7 +77,7 @@ class poe_assignment_submission
           AND s.status = 'submitted'
     ";
 
-        $records = $DB->get_records_sql($sql, [$courseid]);
+        $records = $DB->get_recordset_sql($sql, [$courseid]);
 
         $submissions = [];
 
@@ -100,6 +100,7 @@ class poe_assignment_submission
                 $record->fileid ?? null
             );
         }
+        $records->close();
 
         return $submissions;
     }
