@@ -104,20 +104,25 @@ class poe_quiz_attempt {
 
     static function get_all_quiz_attempts(int $courseid) {
         global $DB;
+
+        $prefixes = poe_course::get_section_prefixes($courseid);
+
         $qa_sql = "
             SELECT qa.id, qa.state, qa.timestart, qa.timefinish, qa.sumgrades, qa.attempt, qa.uniqueid,
                     u.firstname, u.lastname,
                     q.name AS quizname,
-                    cs.name AS sectionname
+                    cs.id AS sectionid,
+                    cs.name AS sectionname,
+                    cs.section AS sectionnumber
             FROM {quiz_attempts} qa 
             JOIN {user} u ON u.id = qa.userid
             JOIN {quiz} q ON q.id = qa.quiz
             JOIN {course_modules} cm ON cm.instance = q.id
             JOIN {modules} m ON m.id = cm.module AND m.name = 'quiz'
             JOIN {course_sections} cs ON cs.id = cm.section
-            WHERE q.course = ?";
+            WHERE q.course = ? AND cm.course = ?";
 
-        $qa_records = $DB->get_records_sql($qa_sql, [$courseid]);
+        $qa_records = $DB->get_records_sql($qa_sql, [$courseid, $courseid]);
         $quiz_feedback = $DB->get_records('quiz_feedback');
 
         $quiz_attempts = [];
@@ -126,7 +131,22 @@ class poe_quiz_attempt {
         foreach ($qa_records as $value) {
             $qa = new poe_quiz_attempt($value->state, $value->timestart, $value->timefinish, $value->attempt, $value->sumgrades);
             $qa->set_student($value->firstname . " " . $value->lastname);
-            $qa->set_sectionname($value->sectionname);
+
+            $sectionname = $value->sectionname ?? '';
+            
+            // Fallback for unnamed sections
+            if (empty($sectionname) || $sectionname === '') {
+                if ($value->sectionnumber == 0) {
+                    $sectionname = get_string('general');
+                } else {
+                    $sectionname = get_string('sectionname', 'format_topics') . ' ' . $value->sectionnumber;
+                }
+            }
+
+            if (isset($prefixes[$value->sectionid])) {
+                $sectionname = $prefixes[$value->sectionid] . '_' . $sectionname;
+            }
+            $qa->set_sectionname($sectionname);
             $qa->set_quizname($value->quizname);
             $qa->set_question_attempts(array_filter($question_attempts, fn($val) => $val->get_usageid() == $value->uniqueid));
 
