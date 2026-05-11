@@ -49,6 +49,7 @@ class poe_assignment_submission
             a.name AS assignmentname,
             cs.id AS sectionid,
             cs.name AS sectionname,
+            cs.section AS sectionnumber,
 
             u.firstname,
             u.lastname,
@@ -61,8 +62,11 @@ class poe_assignment_submission
         JOIN {assign} a 
             ON a.id = s.assignment
 
+        JOIN {modules} m
+            ON m.name = 'assign'
+
         JOIN {course_modules} cm 
-            ON cm.instance = a.id
+            ON cm.instance = a.id AND cm.module = m.id
 
         JOIN {course_sections} cs 
             ON cs.id = cm.section
@@ -74,10 +78,11 @@ class poe_assignment_submission
             ON at.submission = s.id
 
         WHERE a.course = ?
+          AND cm.course = ?
           AND s.status = 'submitted'
     ";
 
-        $records = $DB->get_recordset_sql($sql, [$courseid]);
+        $records = $DB->get_recordset_sql($sql, [$courseid, $courseid]);
 
         $submissions = [];
 
@@ -86,6 +91,16 @@ class poe_assignment_submission
             $studentname = "{$record->firstname} {$record->lastname}";
 
             $sectionname = $record->sectionname ?? '';
+            
+            // Fallback for unnamed sections
+            if (empty($sectionname) || $sectionname === '') {
+                if ($record->sectionnumber == 0) {
+                    $sectionname = get_string('general');
+                } else {
+                    $sectionname = get_string('sectionname', 'format_topics') . ' ' . $record->sectionnumber;
+                }
+            }
+
             if (isset($prefixes[$record->sectionid])) {
                 $sectionname = $prefixes[$record->sectionid] . '_' . $sectionname;
             }

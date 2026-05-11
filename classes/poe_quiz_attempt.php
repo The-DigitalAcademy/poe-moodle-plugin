@@ -112,16 +112,17 @@ class poe_quiz_attempt {
                     u.firstname, u.lastname,
                     q.name AS quizname,
                     cs.id AS sectionid,
-                    cs.name AS sectionname
+                    cs.name AS sectionname,
+                    cs.section AS sectionnumber
             FROM {quiz_attempts} qa 
             JOIN {user} u ON u.id = qa.userid
             JOIN {quiz} q ON q.id = qa.quiz
             JOIN {course_modules} cm ON cm.instance = q.id
             JOIN {modules} m ON m.id = cm.module AND m.name = 'quiz'
             JOIN {course_sections} cs ON cs.id = cm.section
-            WHERE q.course = ?";
+            WHERE q.course = ? AND cm.course = ?";
 
-        $qa_records = $DB->get_records_sql($qa_sql, [$courseid]);
+        $qa_records = $DB->get_records_sql($qa_sql, [$courseid, $courseid]);
         $quiz_feedback = $DB->get_records('quiz_feedback');
 
         $quiz_attempts = [];
@@ -131,7 +132,17 @@ class poe_quiz_attempt {
             $qa = new poe_quiz_attempt($value->state, $value->timestart, $value->timefinish, $value->attempt, $value->sumgrades);
             $qa->set_student($value->firstname . " " . $value->lastname);
 
-            $sectionname = $value->sectionname;
+            $sectionname = $value->sectionname ?? '';
+            
+            // Fallback for unnamed sections
+            if (empty($sectionname) || $sectionname === '') {
+                if ($value->sectionnumber == 0) {
+                    $sectionname = get_string('general');
+                } else {
+                    $sectionname = get_string('sectionname', 'format_topics') . ' ' . $value->sectionnumber;
+                }
+            }
+
             if (isset($prefixes[$value->sectionid])) {
                 $sectionname = $prefixes[$value->sectionid] . '_' . $sectionname;
             }
