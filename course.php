@@ -47,7 +47,7 @@ echo html_writer::empty_tag('input', [
 ]);
 
 echo html_writer::select($options, 'cohortid', '', false);
-
+echo '<span style="margin-left:15px;"></span>';
 //  Download button
 echo html_writer::empty_tag('input', [
     'type' => 'submit',
