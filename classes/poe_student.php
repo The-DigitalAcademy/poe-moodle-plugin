@@ -22,7 +22,7 @@ class poe_student {
     }
 
     /**
-     * 🔥 REQUIRED (used everywhere)
+     *  REQUIRED (used everywhere)
      */
     public function get_fullname(): string {
         return trim("{$this->firstname} {$this->lastname}");
@@ -40,7 +40,7 @@ class poe_student {
     }
 
     /**
-     * 🔥 STATIC LOADER
+     *  STATIC LOADER
      */
     public static function get_enrolled_students(int $courseid): array {
         global $DB;
@@ -70,4 +70,27 @@ class poe_student {
 
         return $students;
     }
+    public static function get_students_by_cohort(int $courseid, int $cohortid): array {
+    global $DB;
+
+    $sql = "
+        SELECT u.id, u.firstname, u.lastname
+        FROM {cohort_members} cm
+        JOIN {user} u ON u.id = cm.userid
+        JOIN {user_enrolments} ue ON ue.userid = u.id
+        JOIN {enrol} e ON e.id = ue.enrolid
+        WHERE cm.cohortid = ?
+          AND e.courseid = ?
+    ";
+
+    $records = $DB->get_records_sql($sql, [$cohortid, $courseid]);
+
+    $students = [];
+
+    foreach ($records as $r) {
+        $students[] = new poe_student($r->id, $r->firstname, $r->lastname);
+    }
+
+    return $students;
+}
 }

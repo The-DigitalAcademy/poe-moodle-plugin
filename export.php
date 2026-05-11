@@ -5,9 +5,9 @@ use local_poe\poe_course;
 require('../../config.php');
 
 $courseid = required_param('id', PARAM_INT);
+$cohortid = optional_param('cohortid', 0, PARAM_INT);
 require_login($courseid, true);
-
-$course = new poe_course($courseid);
+$course = new poe_course($courseid, $cohortid);
 
 // create temp directory
 $tempzip = tempnam($CFG->tempdir . '/', 'poe');
