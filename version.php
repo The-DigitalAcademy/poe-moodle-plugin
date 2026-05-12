@@ -1,5 +1,5 @@
 <?php
 
 $plugin->component = 'local_poe';
-$plugin->version   = 202604180328;
+$plugin->version   = 202604180353;
 $plugin->requires  = 2022041900;
