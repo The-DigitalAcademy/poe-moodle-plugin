@@ -274,7 +274,8 @@ class poe_course
 
     public function get_pdf_guide(): string
     {
-        require_once(__DIR__ . '/../vendor/autoload.php');
+        global $CFG;
+        require_once(dirname($CFG->dirroot) . '/vendor/autoload.php');
 
         $html = $this->get_html_guide();
 

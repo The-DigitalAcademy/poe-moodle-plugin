@@ -11,13 +11,14 @@ The Portfolio Export Plugin is a custom **Moodle local plugin** that enables aut
 
 1. Clone the plugin into your Moodle `local` directory:
 ```bash
+    cd <moodle-root>/local
     git clone https://github.com/The-DigitalAcademy/poe-moodle-plugin.git poe
 ```
 
-2. Install PHP dependencies:
+2. Install PHP dependencies (mPDF):
 ```bash
-    cd /path/to/moodle/local/poe
-    composer install
+    cd <moodle-root>
+    composer require mpdf/mpdf
 ```
 
 3. Log in to Moodle as an administrator and navigate to:

@@ -1,7 +1,0 @@
-{
-    "name": "local/poe",
-    "description": "POE Plugin",
-    "require": {
-        "mpdf/mpdf": "^8.3"
-    }
-}
