@@ -59,6 +59,9 @@ public static function get_course_assignment_submissions(int $courseid): array {
         JOIN {course_modules} cm 
             ON cm.instance = a.id
 
+        JOIN {modules} m 
+	        ON m.id = cm.module AND m.name = 'assign'
+
         JOIN {course_sections} cs 
             ON cs.id = cm.section
 
@@ -70,6 +73,9 @@ public static function get_course_assignment_submissions(int $courseid): array {
 
         LEFT JOIN {files} f 
             ON f.itemid = s.id
+            AND f.component = 'assignsubmission_file'
+            AND f.filearea = 'submission_files'
+            AND f.filename <> '.'
 
         WHERE a.course = ?
           AND s.status = 'submitted'
