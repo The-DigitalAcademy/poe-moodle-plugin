@@ -20,7 +20,7 @@ echo html_writer::tag('h2', 'Export Course Portfolio');
 
 global $DB;
 
-// Pull Moodle Groups ( as Cohorts)
+// Pull Moodle Groups 
 $groups = $DB->get_records_sql("
     SELECT id, name
     FROM {groups}

@@ -79,7 +79,7 @@ class poe_course
 
    public function __construct(int $id, int $groupid = 0)
     {
-        $course = get_course($courseid);
+        $course = get_course($id);
 
         $this->id = $course->id;
         $this->name = $course->fullname;

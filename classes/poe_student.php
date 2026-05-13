@@ -90,12 +90,16 @@ public static function get_students_by_group(int $courseid, int $groupid): array
 
     $records = $DB->get_records_sql($sql, [$courseid, $groupid]);
 
-    $students = array_map(function ($item) {
-        return new poe_student(
+    $students = [];
+
+    foreach ($records as $item) {
+
+        $students[] = new poe_student(
             $item->id,
-            "{$item->firstname} {$item->lastname}"
+            $item->firstname,
+            $item->lastname
         );
-    }, $records);
+    }
 
     return $students;
 }
