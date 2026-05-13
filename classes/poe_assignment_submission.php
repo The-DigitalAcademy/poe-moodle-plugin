@@ -38,58 +38,54 @@ class poe_assignment_submission
         $prefixes = poe_course::get_section_prefixes($courseid);
 
         $sql = "
-        SELECT 
-            s.id,
-            s.userid,
-            s.assignment,
-            s.timecreated,
-            s.timemodified,
-            s.attemptnumber,
+            SELECT 
+                s.id,
+                s.userid,
+                s.assignment,
+                s.timecreated,
+                s.timemodified,
+                s.attemptnumber,
 
-            a.name AS assignmentname,
-            cs.id AS sectionid,
-            cs.name AS sectionname,
-            cs.section AS sectionnumber,
+                a.name AS assignmentname,
+                cs.id AS sectionid,
+                cs.name AS sectionname,
+                cs.section AS sectionnumber,
 
-            u.firstname,
-            u.lastname,
+                u.firstname,
+                u.lastname,
 
-            at.onlinetext,
-            (SELECT MAX(id) FROM {files} WHERE itemid = s.id AND component = 'mod_assign' AND filearea = 'submission_files' AND filename != '.') AS fileid
+                a_t.onlinetext,
+                f.id AS fileid
 
-        FROM {assign_submission} s
+            FROM {assign_submission} s
 
-        JOIN {assign} a 
-            ON a.id = s.assignment
+            JOIN {assign} a 
+                ON a.id = s.assignment
 
-        JOIN {modules} m
-            ON m.name = 'assign'
+            JOIN {course_modules} cm 
+                ON cm.instance = a.id
 
-        JOIN {course_modules} cm 
-            ON cm.instance = a.id AND cm.module = m.id
+            JOIN {modules} m 
+                ON m.id = cm.module AND m.name = 'assign'
 
-        JOIN {modules} m 
-	        ON m.id = cm.module AND m.name = 'assign'
+            JOIN {course_sections} cs 
+                ON cs.id = cm.section
 
-        JOIN {course_sections} cs 
-            ON cs.id = cm.section
+            JOIN {user} u 
+                ON u.id = s.userid
 
-        JOIN {user} u 
-            ON u.id = s.userid
+            LEFT JOIN {assignsubmission_onlinetext} a_t 
+                ON a_t.submission = s.id
 
-        LEFT JOIN {assignsubmission_onlinetext} at 
-            ON at.submission = s.id
+            LEFT JOIN {files} f 
+                ON f.itemid = s.id
+                AND f.component = 'assignsubmission_file'
+                AND f.filearea = 'submission_files'
+                AND f.filename <> '.'
 
-        LEFT JOIN {files} f 
-            ON f.itemid = s.id
-            AND f.component = 'assignsubmission_file'
-            AND f.filearea = 'submission_files'
-            AND f.filename <> '.'
-
-        WHERE a.course = ?
-          AND cm.course = ?
-          AND s.status = 'submitted'
-    ";
+            WHERE a.course = ?
+                AND s.status = 'submitted'
+        ";
 
         $records = $DB->get_recordset_sql($sql, [$courseid, $courseid]);
 
