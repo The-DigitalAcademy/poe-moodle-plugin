@@ -88,7 +88,7 @@ class poe_course
   if ($groupid > 0) {
     $this->students = poe_student::get_students_by_group($this->id, $groupid);
 } else {
-    $this->students = $this->get_enrolled_students();
+   $this->students = poe_student::get_enrolled_students($this->id);
 }
         //  aligned with develop
         $this->assignments = poe_assignment::get_course_assignments($this->id);
