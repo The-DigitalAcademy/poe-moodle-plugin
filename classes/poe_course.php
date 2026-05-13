@@ -384,4 +384,55 @@ class poe_course
             
         return $html;
     }
+
+    public function get_pdf_guide(): string
+    {
+        global $CFG;
+        require_once(dirname($CFG->dirroot) . '/vendor/autoload.php');
+
+        $html = $this->get_html_guide();
+
+        // mPDF doesn't support CSS custom properties — replace with literal values
+        $html = str_replace(
+            [
+                'var(--primary-color)',
+                'var(--accent-color)',
+                'var(--secondary-color)',
+                'var(--bg-color)',
+                'var(--card-bg)',
+                'var(--text-main)',
+                'var(--text-muted)',
+                'var(--border-color)',
+                'var(--code-bg)',
+                'var(--code-text)',
+            ],
+            [
+                '#0f172a',
+                '#3b82f6',
+                '#64748b',
+                '#f1f5f9',
+                '#ffffff',
+                '#1e293b',
+                '#64748b',
+                '#e2e8f0',
+                '#1e293b',
+                '#f8fafc',
+            ],
+            $html
+        );
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4',
+            'margin_top'    => 15,
+            'margin_bottom' => 15,
+            'margin_left'   => 15,
+            'margin_right'  => 15,
+            'tempDir'       => sys_get_temp_dir(),
+        ]);
+
+        $mpdf->WriteHTML($html);
+
+        return $mpdf->Output('', 'S');
+    }
 }
