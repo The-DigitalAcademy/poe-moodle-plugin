@@ -25,6 +25,58 @@ class poe_course
     /** @var poe_quiz_attempt[] */
     protected array $quiz_attempts = [];
 
+    /**
+     * Returns an ordered map of section ID => numeric prefix (e.g., "01", "02")
+     * based on the visual sequence in Moodle (handling subsections).
+     */
+    public static function get_section_prefixes(int $courseid): array {
+        global $DB;
+        
+        $all_sections = $DB->get_records('course_sections', ['course' => $courseid], 'section ASC');
+        $ordered_sections = [];
+
+        foreach ($all_sections as $sec) {
+            if (!isset($sec->component) || empty($sec->component)) {
+                $ordered_sections[] = $sec;
+                
+                if (!empty($sec->sequence)) {
+                    $cm_ids = explode(',', $sec->sequence);
+                    foreach ($cm_ids as $cm_id) {
+                        $cm_id = trim($cm_id);
+                        if ($cm_id === '') continue;
+                        
+                        $mod_info = $DB->get_record_sql("
+                            SELECT cm.id, m.name as modname, cm.instance
+                            FROM {course_modules} cm
+                            JOIN {modules} m ON m.id = cm.module
+                            WHERE cm.id = ? AND m.name = 'subsection'
+                        ", [(int)$cm_id]);
+                        
+                        if ($mod_info) {
+                            foreach ($all_sections as $sub_sec) {
+                                if (isset($sub_sec->component) && $sub_sec->component === 'mod_subsection' && $sub_sec->itemid == $mod_info->instance) {
+                                    $ordered_sections[] = $sub_sec;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $prefixes = [];
+        $counter = 1;
+        foreach ($ordered_sections as $section) {
+            // Only prefix sections that actually have content or a name
+            // (Similar to the skip logic in get_html_guide)
+            $prefixes[$section->id] = str_pad($counter, 2, '0', STR_PAD_LEFT);
+            $counter++;
+        }
+
+        return $prefixes;
+    }
+
     public function __construct(int $courseid)
     {
         $course = get_course($courseid);
@@ -268,7 +320,7 @@ class poe_course
         }
 
         $html .= '</div></body></html>';
-
+            
         return $html;
     }    
 

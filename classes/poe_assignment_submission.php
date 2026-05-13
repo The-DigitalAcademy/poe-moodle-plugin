@@ -3,7 +3,8 @@ namespace local_poe;
 
 defined('MOODLE_INTERNAL') || die();
 
-class poe_assignment_submission {
+class poe_assignment_submission
+{
 
     protected int $userid;
     protected string $student_fullname;
@@ -30,10 +31,13 @@ class poe_assignment_submission {
         $this->onlinetext = $onlinetext ?? '';
         $this->fileid = $fileid;
     }
-public static function get_course_assignment_submissions(int $courseid): array {
-    global $DB;
+    public static function get_course_assignment_submissions(int $courseid): array
+    {
+        global $DB;
 
-    $sql = "
+        $prefixes = poe_course::get_section_prefixes($courseid);
+
+        $sql = "
         SELECT 
             s.id,
             s.userid,
@@ -43,21 +47,26 @@ public static function get_course_assignment_submissions(int $courseid): array {
             s.attemptnumber,
 
             a.name AS assignmentname,
+            cs.id AS sectionid,
             cs.name AS sectionname,
+            cs.section AS sectionnumber,
 
             u.firstname,
             u.lastname,
 
             at.onlinetext,
-            f.id AS fileid
+            (SELECT MAX(id) FROM {files} WHERE itemid = s.id AND component = 'mod_assign' AND filearea = 'submission_files' AND filename != '.') AS fileid
 
         FROM {assign_submission} s
 
         JOIN {assign} a 
             ON a.id = s.assignment
 
+        JOIN {modules} m
+            ON m.name = 'assign'
+
         JOIN {course_modules} cm 
-            ON cm.instance = a.id
+            ON cm.instance = a.id AND cm.module = m.id
 
         JOIN {course_sections} cs 
             ON cs.id = cm.section
@@ -68,38 +77,53 @@ public static function get_course_assignment_submissions(int $courseid): array {
         LEFT JOIN {assignsubmission_onlinetext} at 
             ON at.submission = s.id
 
-        LEFT JOIN {files} f 
-            ON f.itemid = s.id
-
         WHERE a.course = ?
+          AND cm.course = ?
           AND s.status = 'submitted'
     ";
 
-    $records = $DB->get_records_sql($sql, [$courseid]);
+        $records = $DB->get_recordset_sql($sql, [$courseid, $courseid]);
 
-    $submissions = [];
+        $submissions = [];
 
-    foreach ($records as $record) {
+        foreach ($records as $record) {
 
-        $studentname = "{$record->firstname} {$record->lastname}";
+            $studentname = "{$record->firstname} {$record->lastname}";
 
-        $submissions[] = new poe_assignment_submission(
-            $record->userid,
-            $studentname,
-            $record->sectionname ?? '',
-            $record->assignmentname ?? '',
-            $record->attemptnumber ?? 0,
-            $record->onlinetext ?? '',
-            $record->fileid ?? null
-        );
+            $sectionname = $record->sectionname ?? '';
+            
+            // Fallback for unnamed sections
+            if (empty($sectionname) || $sectionname === '') {
+                if ($record->sectionnumber == 0) {
+                    $sectionname = get_string('general');
+                } else {
+                    $sectionname = get_string('sectionname', 'format_topics') . ' ' . $record->sectionnumber;
+                }
+            }
+
+            if (isset($prefixes[$record->sectionid])) {
+                $sectionname = $prefixes[$record->sectionid] . '_' . $sectionname;
+            }
+
+            $submissions[] = new poe_assignment_submission(
+                $record->userid,
+                $studentname,
+                $sectionname,
+                $record->assignmentname ?? '',
+                $record->attemptnumber ?? 0,
+                $record->onlinetext ?? '',
+                $record->fileid ?? null
+            );
+        }
+        $records->close();
+
+        return $submissions;
     }
-
-    return $submissions;
-}
     /**
      * 🔥 Render submission as full HTML document
      */
-    public function to_html(): string {
+    public function to_html(): string
+    {
 
         $html = poe_renderer::get_styles();
 
@@ -137,35 +161,43 @@ public static function get_course_assignment_submissions(int $courseid): array {
     /**
      * 🔹 Getters (used in export.php)
      */
-    public function get_student_fullname(): string {
+    public function get_student_fullname(): string
+    {
         return $this->student_fullname;
     }
 
-    public function get_course_section_name(): string {
+    public function get_course_section_name(): string
+    {
         return $this->sectionname;
     }
 
-    public function get_assignment_name(): string {
+    public function get_assignment_name(): string
+    {
         return $this->assignmentname;
     }
 
-    public function get_attemptnumber(): int {
+    public function get_attemptnumber(): int
+    {
         return $this->attemptnumber;
     }
 
-    public function get_onlinetext(): string {
+    public function get_onlinetext(): string
+    {
         return $this->onlinetext;
     }
 
-    public function has_onlinetext(): bool {
+    public function has_onlinetext(): bool
+    {
         return !empty(trim($this->onlinetext));
     }
 
-    public function has_file(): bool {
+    public function has_file(): bool
+    {
         return !empty($this->fileid);
     }
 
-    public function get_fileid(): ?int {
+    public function get_fileid(): ?int
+    {
         return $this->fileid;
     }
 }
