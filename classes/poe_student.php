@@ -70,4 +70,33 @@ class poe_student {
 
         return $students;
     }
+   
+public static function get_students_by_group(int $courseid, int $groupid): array {
+    global $DB;
+
+    $sql = "
+        SELECT 
+            u.id,
+            u.firstname,
+            u.lastname
+        FROM {groups_members} gm
+        JOIN {user} u 
+            ON u.id = gm.userid
+        JOIN {groups} g
+            ON g.id = gm.groupid
+        WHERE g.courseid = ?
+          AND gm.groupid = ?
+    ";
+
+    $records = $DB->get_records_sql($sql, [$courseid, $groupid]);
+
+    $students = array_map(function ($item) {
+        return new poe_student(
+            $item->id,
+            "{$item->firstname} {$item->lastname}"
+        );
+    }, $records);
+
+    return $students;
+}
 }

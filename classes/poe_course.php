@@ -77,7 +77,7 @@ class poe_course
         return $prefixes;
     }
 
-    public function __construct(int $courseid)
+   public function __construct(int $id, int $groupid = 0)
     {
         $course = get_course($courseid);
 
@@ -85,10 +85,12 @@ class poe_course
         $this->name = $course->fullname;
         $this->summary = $course->summary ?? '';
 
-        // 🔥 REQUIRED (you removed this — causes crash)
-        $this->students = poe_student::get_enrolled_students($this->id);
-
-        // 🔥 aligned with develop
+  if ($groupid > 0) {
+    $this->students = poe_student::get_students_by_group($this->id, $groupid);
+} else {
+    $this->students = $this->get_enrolled_students();
+}
+        //  aligned with develop
         $this->assignments = poe_assignment::get_course_assignments($this->id);
         $this->quizzes = poe_quiz::get_course_quizzes($this->id);
         $this->assignment_submissions = poe_assignment_submission::get_course_assignment_submissions($this->id);
