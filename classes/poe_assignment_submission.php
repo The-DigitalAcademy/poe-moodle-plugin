@@ -31,11 +31,9 @@ class poe_assignment_submission
         $this->onlinetext = $onlinetext ?? '';
         $this->fileid = $fileid;
     }
-    public static function get_course_assignment_submissions(int $courseid): array
+    public static function get_course_assignment_submissions(int $courseid, array $prefixes): array
     {
         global $DB;
-
-        $prefixes = poe_course::get_section_prefixes($courseid);
 
         $sql = "
         SELECT 
