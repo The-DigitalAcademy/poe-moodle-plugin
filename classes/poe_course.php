@@ -377,7 +377,7 @@ class poe_course
         return $mpdf->Output('', 'S');
     }
 
-    public function get_pdf_guide(): string
+   /*  public function get_pdf_guides(): string
     {
         global $CFG;
         require_once(dirname($CFG->dirroot) . '/vendor/autoload.php');
@@ -426,5 +426,5 @@ class poe_course
         $mpdf->WriteHTML($html);
 
         return $mpdf->Output('', 'S');
-    }
+    } */
 }
