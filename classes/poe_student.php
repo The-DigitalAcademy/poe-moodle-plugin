@@ -55,6 +55,9 @@ class poe_student {
             FROM {user_enrolments} ue
             JOIN {enrol} e ON e.id = ue.enrolid
             JOIN {user} u ON u.id = ue.userid
+            JOIN {role_assignments} ra ON ra.userid = u.id
+            JOIN {role} r ON r.id = ra.roleid AND r.shortname = 'student'
+            JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.contextlevel = 50 AND ctx.instanceid = e.courseid
             WHERE e.courseid = ?
         ";
 

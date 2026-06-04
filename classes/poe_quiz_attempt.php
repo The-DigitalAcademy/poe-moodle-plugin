@@ -102,15 +102,14 @@ class poe_quiz_attempt {
     }
 
 
-    static function get_all_quiz_attempts(int $courseid) {
+    static function get_all_quiz_attempts(int $courseid, array $prefixes) {
         global $DB;
-
-        $prefixes = poe_course::get_section_prefixes($courseid);
 
         $qa_sql = "
             SELECT qa.id, qa.state, qa.timestart, qa.timefinish, qa.sumgrades, qa.attempt, qa.uniqueid,
                     u.firstname, u.lastname,
                     q.name AS quizname,
+                    q.id AS quizid,
                     cs.id AS sectionid,
                     cs.name AS sectionname,
                     cs.section AS sectionnumber
@@ -123,10 +122,21 @@ class poe_quiz_attempt {
             WHERE q.course = ? AND cm.course = ?";
 
         $qa_records = $DB->get_records_sql($qa_sql, [$courseid, $courseid]);
-        $quiz_feedback = $DB->get_records('quiz_feedback');
+
+        // Fetch feedback only for quizzes in this course
+        $quiz_ids = array_unique(array_column((array) $qa_records, 'quizid'));
+        $quiz_feedback = empty($quiz_ids)
+            ? []
+            : $DB->get_records_list('quiz_feedback', 'quizid', $quiz_ids);
 
         $quiz_attempts = [];
         $question_attempts = poe_quiz_question_attempt::get_question_attempts($courseid);
+
+        // Group question attempts by usageid for fast lookup
+        $question_attempts_by_usage = [];
+        foreach ($question_attempts as $qatt) {
+            $question_attempts_by_usage[$qatt->get_usageid()][] = $qatt;
+        }
 
         foreach ($qa_records as $value) {
             $qa = new poe_quiz_attempt($value->state, $value->timestart, $value->timefinish, $value->attempt, $value->sumgrades);
@@ -148,7 +158,7 @@ class poe_quiz_attempt {
             }
             $qa->set_sectionname($sectionname);
             $qa->set_quizname($value->quizname);
-            $qa->set_question_attempts(array_filter($question_attempts, fn($val) => $val->get_usageid() == $value->uniqueid));
+            $qa->set_question_attempts($question_attempts_by_usage[$value->uniqueid] ?? []);
 
             $filtered_feedback = array_filter($quiz_feedback, fn($fb) => $value->sumgrades >= $fb->mingrade && $value->sumgrades <= $fb->maxgrade);
             $qa->set_feedback(reset($filtered_feedback)->feedbacktext ?? '');

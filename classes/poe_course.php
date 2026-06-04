@@ -33,32 +33,55 @@ class poe_course
         global $DB;
         
         $all_sections = $DB->get_records('course_sections', ['course' => $courseid], 'section ASC');
-        $ordered_sections = [];
 
+        // Bulk-fetch all subsection module info in one query
+        $cm_ids_flat = [];
+        foreach ($all_sections as $sec) {
+            if ((!isset($sec->component) || empty($sec->component)) && !empty($sec->sequence)) {
+                foreach (explode(',', $sec->sequence) as $cm_id) {
+                    $cm_id = trim($cm_id);
+                    if ($cm_id !== '') {
+                        $cm_ids_flat[] = (int) $cm_id;
+                    }
+                }
+            }
+        }
+
+        $subsection_map = []; // cm_id => section record
+        if (!empty($cm_ids_flat)) {
+            list($cm_in_sql, $cm_params) = $DB->get_in_or_equal($cm_ids_flat);
+            $mod_records = $DB->get_records_sql("
+                SELECT cm.id AS cmid, cm.instance
+                FROM {course_modules} cm
+                JOIN {modules} m ON m.id = cm.module
+                WHERE cm.id $cm_in_sql AND m.name = 'subsection'
+            ", $cm_params);
+
+            // Index subsection sections by their itemid (instance)
+            $subsec_sections_by_itemid = [];
+            foreach ($all_sections as $sec) {
+                if (isset($sec->component) && $sec->component === 'mod_subsection') {
+                    $subsec_sections_by_itemid[$sec->itemid] = $sec;
+                }
+            }
+
+            foreach ($mod_records as $mod) {
+                if (isset($subsec_sections_by_itemid[$mod->instance])) {
+                    $subsection_map[$mod->cmid] = $subsec_sections_by_itemid[$mod->instance];
+                }
+            }
+        }
+
+        $ordered_sections = [];
         foreach ($all_sections as $sec) {
             if (!isset($sec->component) || empty($sec->component)) {
                 $ordered_sections[] = $sec;
-                
+
                 if (!empty($sec->sequence)) {
-                    $cm_ids = explode(',', $sec->sequence);
-                    foreach ($cm_ids as $cm_id) {
+                    foreach (explode(',', $sec->sequence) as $cm_id) {
                         $cm_id = trim($cm_id);
-                        if ($cm_id === '') continue;
-                        
-                        $mod_info = $DB->get_record_sql("
-                            SELECT cm.id, m.name as modname, cm.instance
-                            FROM {course_modules} cm
-                            JOIN {modules} m ON m.id = cm.module
-                            WHERE cm.id = ? AND m.name = 'subsection'
-                        ", [(int)$cm_id]);
-                        
-                        if ($mod_info) {
-                            foreach ($all_sections as $sub_sec) {
-                                if (isset($sub_sec->component) && $sub_sec->component === 'mod_subsection' && $sub_sec->itemid == $mod_info->instance) {
-                                    $ordered_sections[] = $sub_sec;
-                                    break;
-                                }
-                            }
+                        if ($cm_id !== '' && isset($subsection_map[(int) $cm_id])) {
+                            $ordered_sections[] = $subsection_map[(int) $cm_id];
                         }
                     }
                 }
@@ -85,16 +108,18 @@ class poe_course
         $this->name = $course->fullname;
         $this->summary = $course->summary ?? '';
 
-  if ($groupid > 0) {
-    $this->students = poe_student::get_students_by_group($this->id, $groupid);
-} else {
-   $this->students = poe_student::get_enrolled_students($this->id);
-}
-        //  aligned with develop
-        $this->assignments = poe_assignment::get_course_assignments($this->id);
+        if ($groupid > 0) {
+            $this->students = poe_student::get_students_by_group($this->id, $groupid);
+        } else {
+            $this->students = poe_student::get_enrolled_students($this->id);
+        }
+
+        // Compute section prefixes once and pass to all loaders
+        $prefixes = self::get_section_prefixes($this->id);
+        $this->assignments = poe_assignment::get_course_assignments($this->id, $prefixes);
         $this->quizzes = poe_quiz::get_course_quizzes($this->id);
-        $this->assignment_submissions = poe_assignment_submission::get_course_assignment_submissions($this->id);
-        $this->quiz_attempts = poe_quiz_attempt::get_all_quiz_attempts($this->id);
+        $this->assignment_submissions = poe_assignment_submission::get_course_assignment_submissions($this->id, $prefixes);
+        $this->quiz_attempts = poe_quiz_attempt::get_all_quiz_attempts($this->id, $prefixes);
     }
 
     /**
@@ -204,6 +229,78 @@ class poe_course
         $all_sections = $DB->get_records('course_sections', ['course' => $this->id], 'section ASC');
         $sections     = [];
 
+        // Collect all course module ids across all root sections in one pass
+        $all_cm_ids = [];
+        foreach ($all_sections as $sec) {
+            if (!isset($sec->component) || empty($sec->component)) {
+                if (!empty($sec->sequence)) {
+                    foreach (explode(',', $sec->sequence) as $cm_id) {
+                        $cm_id = trim($cm_id);
+                        if ($cm_id !== '') {
+                            $all_cm_ids[] = (int) $cm_id;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bulk-fetch subsection and page/book module info in two queries
+        $subsection_map = []; // cmid => subsection section record
+        $module_map = [];     // cmid => {cmid, modname, instance}
+
+        if (!empty($all_cm_ids)) {
+            list($in_sql, $in_params) = $DB->get_in_or_equal($all_cm_ids);
+
+            $all_mod_records = $DB->get_records_sql("
+                SELECT cm.id AS cmid, m.name AS modname, cm.instance
+                FROM {course_modules} cm
+                JOIN {modules} m ON m.id = cm.module
+                WHERE cm.id $in_sql AND m.name IN ('subsection', 'page', 'book')
+            ", $in_params);
+
+            // Index subsection sections by itemid
+            $subsec_sections_by_itemid = [];
+            foreach ($all_sections as $sec) {
+                if (isset($sec->component) && $sec->component === 'mod_subsection') {
+                    $subsec_sections_by_itemid[$sec->itemid] = $sec;
+                }
+            }
+
+            foreach ($all_mod_records as $mod) {
+                if ($mod->modname === 'subsection') {
+                    if (isset($subsec_sections_by_itemid[$mod->instance])) {
+                        $subsection_map[$mod->cmid] = $subsec_sections_by_itemid[$mod->instance];
+                    }
+                } else {
+                    $module_map[$mod->cmid] = $mod;
+                }
+            }
+        }
+
+        // Bulk-fetch all pages and books for this course
+        $page_ids = [];
+        $book_ids = [];
+        foreach ($module_map as $mod) {
+            if ($mod->modname === 'page') {
+                $page_ids[] = $mod->instance;
+            } elseif ($mod->modname === 'book') {
+                $book_ids[] = $mod->instance;
+            }
+        }
+
+        $pages_by_id = empty($page_ids) ? [] : $DB->get_records_list('page', 'id', $page_ids);
+
+        $books_by_id = [];
+        $chapters_by_book = [];
+        if (!empty($book_ids)) {
+            $books_by_id = $DB->get_records_list('book', 'id', $book_ids);
+            $all_chapters = $DB->get_records_list('book_chapters', 'bookid', $book_ids, 'pagenum ASC');
+            foreach ($all_chapters as $chapter) {
+                $chapters_by_book[$chapter->bookid][] = $chapter;
+            }
+        }
+
+        // Build the correct visual order by interleaving root sections with their delegated subsections
         foreach ($all_sections as $sec) {
             if (!isset($sec->component) || empty($sec->component)) {
                 $sections[] = $sec;
@@ -211,24 +308,8 @@ class poe_course
                 if (!empty($sec->sequence)) {
                     foreach (explode(',', $sec->sequence) as $cm_id) {
                         $cm_id = trim($cm_id);
-                        if ($cm_id === '') continue;
-
-                        $mod_info = $DB->get_record_sql("
-                            SELECT cm.id, m.name AS modname, cm.instance
-                            FROM {course_modules} cm
-                            JOIN {modules} m ON m.id = cm.module
-                            WHERE cm.id = ? AND m.name = 'subsection'
-                        ", [(int) $cm_id]);
-
-                        if ($mod_info) {
-                            foreach ($all_sections as $sub_sec) {
-                                if (isset($sub_sec->component)
-                                    && $sub_sec->component === 'mod_subsection'
-                                    && $sub_sec->itemid == $mod_info->instance) {
-                                    $sections[] = $sub_sec;
-                                    break;
-                                }
-                            }
+                        if ($cm_id !== '' && isset($subsection_map[(int) $cm_id])) {
+                            $sections[] = $subsection_map[(int) $cm_id];
                         }
                     }
                 }
@@ -242,17 +323,8 @@ class poe_course
             if (!empty($section->sequence)) {
                 foreach (explode(',', $section->sequence) as $cm_id) {
                     $cm_id = trim($cm_id);
-                    if ($cm_id === '') continue;
-
-                    $mod_info = $DB->get_record_sql("
-                        SELECT cm.id, m.name AS modname, cm.instance
-                        FROM {course_modules} cm
-                        JOIN {modules} m ON m.id = cm.module
-                        WHERE cm.id = ? AND m.name IN ('page', 'book')
-                    ", [(int) $cm_id]);
-
-                    if ($mod_info) {
-                        $section_modules[] = $mod_info;
+                    if ($cm_id !== '' && isset($module_map[(int) $cm_id])) {
+                        $section_modules[] = $module_map[(int) $cm_id];
                     }
                 }
             }
@@ -285,8 +357,8 @@ class poe_course
             $html .= '</div>'; // .section-header
 
             foreach ($section_modules as $mod) {
-                if ($mod->modname === 'page') {
-                    $page_record = $DB->get_record('page', ['id' => $mod->instance]);
+                if ($mod->modname == 'page') {
+                    $page_record = $pages_by_id[$mod->instance] ?? null;
                     if ($page_record) {
                         $page  = new poe_page($page_record->id, $page_record->name, $page_record->intro, $page_record->content);
                         $html .= '<div class="content-card">';
@@ -294,20 +366,14 @@ class poe_course
                         $html .= $page->to_html();
                         $html .= '</div>';
                     }
-
-                } elseif ($mod->modname === 'book') {
-                    $book_record = $DB->get_record('book', ['id' => $mod->instance]);
+                } else if ($mod->modname == 'book') {
+                    $book_record = $books_by_id[$mod->instance] ?? null;
                     if ($book_record) {
-                        $book     = new poe_book($book_record->id, $book_record->name, $book_record->intro);
-                        $chapters = $DB->get_records('book_chapters', ['bookid' => $book_record->id], 'pagenum ASC');
-
-                        foreach ($chapters as $chapter) {
-                            $book->chapters[] = new poe_book_chapter(
-                                $chapter->id,
-                                $chapter->pagenum,
-                                $chapter->title,
-                                $chapter->content
-                            );
+                        $book = new poe_book($book_record->id, $book_record->name, $book_record->intro);
+                        
+                        // Use pre-fetched chapters
+                        foreach ($chapters_by_book[$book_record->id] ?? [] as $chapter) {
+                            $book->chapters[] = new poe_book_chapter($chapter->id, $chapter->pagenum, $chapter->title, $chapter->content);
                         }
 
                         $html .= '<div class="content-card book-container">';
@@ -376,55 +442,4 @@ class poe_course
 
         return $mpdf->Output('', 'S');
     }
-
-   /*  public function get_pdf_guides(): string
-    {
-        global $CFG;
-        require_once(dirname($CFG->dirroot) . '/vendor/autoload.php');
-
-        $html = $this->get_html_guide();
-
-        // mPDF doesn't support CSS custom properties — replace with literal values
-        $html = str_replace(
-            [
-                'var(--primary-color)',
-                'var(--accent-color)',
-                'var(--secondary-color)',
-                'var(--bg-color)',
-                'var(--card-bg)',
-                'var(--text-main)',
-                'var(--text-muted)',
-                'var(--border-color)',
-                'var(--code-bg)',
-                'var(--code-text)',
-            ],
-            [
-                '#0f172a',
-                '#3b82f6',
-                '#64748b',
-                '#f1f5f9',
-                '#ffffff',
-                '#1e293b',
-                '#64748b',
-                '#e2e8f0',
-                '#1e293b',
-                '#f8fafc',
-            ],
-            $html
-        );
-
-        $mpdf = new \Mpdf\Mpdf([
-            'mode'          => 'utf-8',
-            'format'        => 'A4',
-            'margin_top'    => 15,
-            'margin_bottom' => 15,
-            'margin_left'   => 15,
-            'margin_right'  => 15,
-            'tempDir'       => sys_get_temp_dir(),
-        ]);
-
-        $mpdf->WriteHTML($html);
-
-        return $mpdf->Output('', 'S');
-    } */
 }

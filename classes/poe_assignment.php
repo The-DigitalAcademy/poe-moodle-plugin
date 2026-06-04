@@ -162,10 +162,8 @@ class poe_assignment {
      * Summary of get_course_assignments
      * @return poe_assignment[]
      */
-    static function get_course_assignments(int $courseid): array {
+    static function get_course_assignments(int $courseid, array $prefixes): array {
         global $DB;
-
-        $prefixes = poe_course::get_section_prefixes($courseid);
 
         $sql = "
             SELECT 
@@ -208,8 +206,7 @@ class poe_assignment {
             ORDER BY a.id, grc.sortorder, grl.score
         ";
 
-        //$records = $DB->get_records_sql($sql, [$courseid]);
-$records = $DB->get_recordset_sql($sql, [$courseid]);
+        $records = $DB->get_recordset_sql($sql, [$courseid]);
         $course_sections = [];
         $course_modules  = [];
         $assignments     = [];
@@ -249,7 +246,7 @@ $records = $DB->get_recordset_sql($sql, [$courseid]);
                 ];
             }
         }
-$records->close();
+        $records->close();
         return array_values($assignments);
     }
 }

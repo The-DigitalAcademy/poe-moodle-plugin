@@ -42,7 +42,25 @@ class poe_quiz_question_attempt {
      */
     static function get_question_attempts(int $courseid): array {
         global $DB;
-        $answer_records = $DB->get_records('question_answers');
+
+        // Fetch only answers for questions used in this course's quizzes
+        $answer_sql = "
+            SELECT DISTINCT qa_ans.id, qa_ans.question, qa_ans.answer, qa_ans.feedback, qa_ans.fraction
+            FROM {question_answers} qa_ans
+            JOIN {question} q ON q.id = qa_ans.question
+            JOIN {question_attempts} qatt ON qatt.questionid = q.id
+            JOIN {quiz_attempts} quiza ON quiza.uniqueid = qatt.questionusageid
+            JOIN {quiz} quiz ON quiz.id = quiza.quiz
+            WHERE quiz.course = ?
+        ";
+        $answer_records = $DB->get_records_sql($answer_sql, [$courseid]);
+
+        // Group answers by question id for fast lookup
+        $answers_by_question = [];
+        foreach ($answer_records as $ans) {
+            $answers_by_question[$ans->question][] = $ans;
+        }
+
         $qa_sql = "
             SELECT 
                 qa.id, qa.questionid, qa.questionusageid, qa.slot, qa.questionsummary, qa.responsesummary, qa.rightanswer, qa.maxmark,
@@ -53,13 +71,16 @@ class poe_quiz_question_attempt {
 	            ON q.id = qa.questionid
             JOIN {question_attempt_steps} qas
                 ON qas.questionattemptid = qa.id AND qas.fraction IS NOT NULL
+            JOIN {quiz_attempts} quiza ON quiza.uniqueid = qa.questionusageid
+            JOIN {quiz} quiz ON quiz.id = quiza.quiz
+            WHERE quiz.course = ?
         ";
-        $qa_records = $DB->get_records_sql($qa_sql);
+        $qa_records = $DB->get_records_sql($qa_sql, [$courseid]);
 
         $question_attempts = [];
 
         foreach ($qa_records as $record) {
-            $answers_filtered = array_filter($answer_records, fn($val) => $val->question == $record->questionid);
+            $answers_filtered = $answers_by_question[$record->questionid] ?? [];
             $answers = array_map(function($val) {
                     $answer = new stdClass();
                     $answer->answer = $val->answer;
