@@ -169,7 +169,7 @@ class poe_assignment {
 
         $sql = "
             SELECT 
-                grl.id AS id,
+                a.id AS id,
                 a.id AS assignment_id,
                 a.name AS a_name,
                 a.intro AS a_intro,
