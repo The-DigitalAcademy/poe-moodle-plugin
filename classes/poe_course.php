@@ -108,17 +108,16 @@ class poe_course
         $this->name = $course->fullname;
         $this->summary = $course->summary ?? '';
 
-  if ($groupid > 0) {
-    $this->students = poe_student::get_students_by_group($this->id, $groupid);
-} else {
-   $this->students = poe_student::get_enrolled_students($this->id);
-}
-        //  aligned with develop
-        $this->assignments = poe_assignment::get_course_assignments($this->id);
-        $this->quizzes = poe_quiz::get_course_quizzes($this->id);
+        if ($groupid > 0) {
+            $this->students = poe_student::get_students_by_group($this->id, $groupid);
+        } else {
+            $this->students = poe_student::get_enrolled_students($this->id);
+        }
 
-        // Compute section prefixes once and pass to both loaders
+        // Compute section prefixes once and pass to all loaders
         $prefixes = self::get_section_prefixes($this->id);
+        $this->assignments = poe_assignment::get_course_assignments($this->id, $prefixes);
+        $this->quizzes = poe_quiz::get_course_quizzes($this->id);
         $this->assignment_submissions = poe_assignment_submission::get_course_assignment_submissions($this->id, $prefixes);
         $this->quiz_attempts = poe_quiz_attempt::get_all_quiz_attempts($this->id, $prefixes);
     }
@@ -443,55 +442,4 @@ class poe_course
 
         return $mpdf->Output('', 'S');
     }
-
-   /*  public function get_pdf_guides(): string
-    {
-        global $CFG;
-        require_once(dirname($CFG->dirroot) . '/vendor/autoload.php');
-
-        $html = $this->get_html_guide();
-
-        // mPDF doesn't support CSS custom properties — replace with literal values
-        $html = str_replace(
-            [
-                'var(--primary-color)',
-                'var(--accent-color)',
-                'var(--secondary-color)',
-                'var(--bg-color)',
-                'var(--card-bg)',
-                'var(--text-main)',
-                'var(--text-muted)',
-                'var(--border-color)',
-                'var(--code-bg)',
-                'var(--code-text)',
-            ],
-            [
-                '#0f172a',
-                '#3b82f6',
-                '#64748b',
-                '#f1f5f9',
-                '#ffffff',
-                '#1e293b',
-                '#64748b',
-                '#e2e8f0',
-                '#1e293b',
-                '#f8fafc',
-            ],
-            $html
-        );
-
-        $mpdf = new \Mpdf\Mpdf([
-            'mode'          => 'utf-8',
-            'format'        => 'A4',
-            'margin_top'    => 15,
-            'margin_bottom' => 15,
-            'margin_left'   => 15,
-            'margin_right'  => 15,
-            'tempDir'       => sys_get_temp_dir(),
-        ]);
-
-        $mpdf->WriteHTML($html);
-
-        return $mpdf->Output('', 'S');
-    } */
 }
