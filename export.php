@@ -3,11 +3,11 @@
 use local_poe\poe_course;
 
 require('../../config.php');
-
+$groupid = optional_param('group', 0, PARAM_INT);
 $courseid = required_param('id', PARAM_INT);
 require_login($courseid, true);
 
-$course = new poe_course($courseid);
+$course = new poe_course($courseid, $groupid);
 
 // create temp directory
 $tempzip = tempnam($CFG->tempdir . '/', 'poe');
