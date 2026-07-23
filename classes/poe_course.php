@@ -232,13 +232,11 @@ class poe_course
         // Collect all course module ids across all root sections in one pass
         $all_cm_ids = [];
         foreach ($all_sections as $sec) {
-            if (!isset($sec->component) || empty($sec->component)) {
-                if (!empty($sec->sequence)) {
-                    foreach (explode(',', $sec->sequence) as $cm_id) {
-                        $cm_id = trim($cm_id);
-                        if ($cm_id !== '') {
-                            $all_cm_ids[] = (int) $cm_id;
-                        }
+            if (!empty($sec->sequence)) {
+                foreach (explode(',', $sec->sequence) as $cm_id) {
+                    $cm_id = trim($cm_id);
+                    if ($cm_id !== '') {
+                        $all_cm_ids[] = (int) $cm_id;
                     }
                 }
             }
@@ -392,12 +390,13 @@ class poe_course
         return $html;
     }    
 
-    public function get_pdf_guide(): string
-    {
+    public function get_pdf_guide(string $html = ''): string {
         global $CFG;
         require_once(dirname($CFG->dirroot) . '/vendor/autoload.php');
 
-        $html = $this->get_html_guide();
+        if (empty($html)) {
+            $html = $this->get_html_guide();
+        }
 
         // mPDF doesn't support CSS custom properties — replace with literal values
         $html = str_replace(
