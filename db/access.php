@@ -1,5 +1,5 @@
 <?php
-// local/poe/db/access.php
+
 // Defines the file serving capability for the export filearea
 
 defined('MOODLE_INTERNAL') || die();
