@@ -1,0 +1,12 @@
+{
+    "name": "local/poe",
+    "authors": [
+        {
+            "name": "kg-manana",
+            "email": "kgomotso@thedigitalacademy.co.za"
+        }
+    ],
+    "require": {
+        "mpdf/mpdf": "^8.3"
+    }
+}
