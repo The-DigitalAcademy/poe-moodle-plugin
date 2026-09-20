@@ -1,51 +1,28 @@
 <?php
-
-use local_poe\poe_course;
+use local_poe\task\poe_export_task;
 
 require('../../config.php');
 
+$groupid  = optional_param('group', 0, PARAM_INT);
 $courseid = required_param('id', PARAM_INT);
 require_login($courseid, true);
-$course = new poe_course($courseid);
 
-// create temp directory
-$tempzip = tempnam($CFG->tempdir . '/', 'poe');
-// $filelist = [];
+// Queue the export as a background task
+$task = new poe_export_task();
+$task->set_custom_data([
+    'courseid' => $courseid,
+    'userid'   => $USER->id,
+    'groupid'  => $groupid,
+]);
+$task->set_userid($USER->id);
+\core\task\manager::queue_adhoc_task($task, true); // true = only queue once if already pending
 
-$html_guide = $course->get_html_guide();
-$filelist = [];
-$fs = get_file_storage();
+// Redirect user back to the course page with a success message
+$courseurl = new moodle_url('/course/view.php', ['id' => $courseid]);
 
-// add generic resources to all students' directories
-foreach ($course->students as $student) {
-    // LEARNER GUIDE 
-    $filelist["/{$student->get_fullname()}/learner_guide.html"] = array($html_guide);
-
-    // ASSIGNMENT
-    foreach ($course->assignments as $assignment) {
-        $filelist["/{$student->get_fullname()}/{$assignment->get_course_section_name()}/{$assignment->get_name()}/assignment.html"] = array($assignment->to_html());
-    }
-    // QUIZ
-    foreach ($course->quizzes as $quiz) {
-        $filelist["/{$student->get_fullname()}/{$quiz->get_course_section_name()}/{$quiz->get_name()}/quiz.html"] = array($quiz->to_html());
-    }
-}
-
-// add each assignment submission to the respective student's directory
-foreach ($course->get_assignment_submissions() as $submission) {
-    if ($submission->has_onlinetext()) {
-        $filelist["/{$submission->get_student_fullname()}/{$submission->get_course_section_name()}/{$submission->get_assignment_name()}/submission-{$submission->get_attemptnumber()}/onlinetext.html"] = array($submission->get_onlinetext());
-    }
-    if ($submission->has_file()) {
-        $stored_file = $fs->get_file_by_id($submission->get_fileid());
-        $filelist["/{$submission->get_student_fullname()}/{$submission->get_course_section_name()}/{$submission->get_assignment_name()}/submission/{$stored_file->get_filename()}"] = $stored_file;
-    }
-}
-
-// zip files
-$zipper = new zip_packer();
-$zipper->archive_to_pathname($filelist, $tempzip);
-
-// send temp file to user, forced download
-send_temp_file($tempzip, "{$course->name}.zip");
-die();
+redirect(
+    $courseurl,
+    get_string('export_queued', 'local_poe'),
+    null,
+    \core\output\notification::NOTIFY_SUCCESS
+);

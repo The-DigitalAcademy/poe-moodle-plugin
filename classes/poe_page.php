@@ -17,6 +17,7 @@ class poe_page {
     }
 
     public function to_html(): string {
+            $html = poe_renderer::get_styles();
         $html = '<h2>' . $this->name . '</h2>';
         $html .= '<div class="page-intro">' . $this->intro . '</div>';
         $html .= '<div class="page-content">' . $this->body . '</div>';

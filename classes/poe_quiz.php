@@ -81,6 +81,7 @@ class poe_quiz {
     }
 
     public function to_html(): string {
+            $html = poe_renderer::get_styles();
         $html = '<h2>' . format_string($this->name) . '</h2>';
         $html .= $this->intro;
 
@@ -96,6 +97,7 @@ class poe_quiz {
 
         return $html;
     }
+    
     public function get_name():string {
         return $this->name;
     }
@@ -106,6 +108,9 @@ class poe_quiz {
 
     static function get_course_quizzes(int $courseid): array {
         global $DB;
+
+        $prefixes = poe_course::get_section_prefixes($courseid);
+
         $sql = "
             SELECT 
                 q.id,
@@ -136,7 +141,8 @@ class poe_quiz {
         foreach ($records as $record) {
             // create course section
             if (empty($course_sections[$record->cs_id])) {
-                $course_sections[$record->cs_id] = new poe_course_section($record->cs_id, $record->cs_name, $record->cs_number, $record->cs_summary, $record->cs_cm_sequence);
+                $prefix = $prefixes[$record->cs_id] ?? '';
+                $course_sections[$record->cs_id] = new poe_course_section($record->cs_id, $record->cs_name, $record->cs_number, $record->cs_summary, $record->cs_cm_sequence, $prefix);
             }
 
             //  create course module
