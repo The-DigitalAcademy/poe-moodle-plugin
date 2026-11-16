@@ -7,6 +7,10 @@ $groupid  = optional_param('group', 0, PARAM_INT);
 $courseid = required_param('id', PARAM_INT);
 require_login($courseid, true);
 
+// Only users with the export capability (teachers/managers) may export
+$context = context_course::instance($courseid);
+require_capability('local/poe:export', $context);
+
 // Queue the export as a background task
 $task = new poe_export_task();
 $task->set_custom_data([

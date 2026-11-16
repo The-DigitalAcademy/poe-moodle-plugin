@@ -6,13 +6,16 @@ $userid   = required_param('userid', PARAM_INT);
 
 require_login($courseid, true);
 
-// Only allow the owner or admins to download
+$context = context_course::instance($courseid);
+
+// Must have the export capability, and may only download their own export (admins excepted)
+require_capability('local/poe:export', $context);
+
 if ($userid !== (int)$USER->id && !is_siteadmin()) {
     throw new \moodle_exception('nopermissions', 'error', '', 'download this export');
 }
 
-$context = context_course::instance($courseid);
-$fs      = get_file_storage();
+$fs = get_file_storage();
 
 // Find the stored export file for this user
 $files = $fs->get_area_files($context->id, 'local_poe', 'export', $userid, 'timecreated DESC', false);
