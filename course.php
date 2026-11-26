@@ -50,17 +50,18 @@ echo html_writer::empty_tag('input', [
 ]);
 
 // Dropdown
+echo html_writer::start_div('mb-3');
 echo html_writer::select($options, 'group', '', false);
-
-// Space
-echo '&nbsp;&nbsp;&nbsp;';
+echo html_writer::end_div();
 
 // Download button
+echo html_writer::start_div();
 echo html_writer::empty_tag('input', [
     'type' => 'submit',
     'value' => 'Download ZIP',
     'class' => 'btn btn-primary'
 ]);
+echo html_writer::end_div();
 
 echo html_writer::end_tag('form');
 
