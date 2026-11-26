@@ -8,6 +8,7 @@ $course = get_course($courseid);
 $context = context_course::instance($courseid);
 
 require_login($courseid, true);
+require_capability('local/poe:export', $context);
 
 $PAGE->set_url('/local/poe/course.php', ['id' => $courseid]);
 $PAGE->set_pagelayout('incourse');

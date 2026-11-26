@@ -102,8 +102,18 @@ class poe_quiz_attempt {
     }
 
 
-    static function get_all_quiz_attempts(int $courseid, array $prefixes) {
+    static function get_all_quiz_attempts(int $courseid, array $prefixes, ?array $userids = null) {
         global $DB;
+
+        if ($userids !== null && empty($userids)) {
+            return [];
+        }
+        $useridsql = '';
+        $useridparams = [];
+        if ($userids !== null) {
+            list($insql, $useridparams) = $DB->get_in_or_equal($userids);
+            $useridsql = " AND u.id $insql";
+        }
 
         $qa_sql = "
             SELECT qa.id, qa.state, qa.timestart, qa.timefinish, qa.sumgrades, qa.attempt, qa.uniqueid,
@@ -119,9 +129,9 @@ class poe_quiz_attempt {
             JOIN {course_modules} cm ON cm.instance = q.id
             JOIN {modules} m ON m.id = cm.module AND m.name = 'quiz'
             JOIN {course_sections} cs ON cs.id = cm.section
-            WHERE q.course = ? AND cm.course = ?";
+            WHERE q.course = ? AND cm.course = ?" . $useridsql;
 
-        $qa_records = $DB->get_records_sql($qa_sql, [$courseid, $courseid]);
+        $qa_records = $DB->get_records_sql($qa_sql, array_merge([$courseid, $courseid], $useridparams));
 
         // Fetch feedback only for quizzes in this course
         $quiz_ids = array_unique(array_column((array) $qa_records, 'quizid'));
