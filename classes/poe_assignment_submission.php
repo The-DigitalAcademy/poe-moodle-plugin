@@ -31,9 +31,19 @@ class poe_assignment_submission
         $this->onlinetext = $onlinetext ?? '';
         $this->fileid = $fileid;
     }
-    public static function get_course_assignment_submissions(int $courseid, array $prefixes): array
+    public static function get_course_assignment_submissions(int $courseid, array $prefixes, ?array $userids = null): array
     {
         global $DB;
+
+        if ($userids !== null && empty($userids)) {
+            return [];
+        }
+        $useridsql = '';
+        $useridparams = [];
+        if ($userids !== null) {
+            list($insql, $useridparams) = $DB->get_in_or_equal($userids);
+            $useridsql = " AND u.id $insql";
+        }
 
         $sql = "
             SELECT 
@@ -83,9 +93,9 @@ class poe_assignment_submission
 
             WHERE a.course = ?
                 AND s.status = 'submitted'
-        ";
+        " . $useridsql;
 
-        $records = $DB->get_recordset_sql($sql, [$courseid, $courseid]);
+        $records = $DB->get_recordset_sql($sql, array_merge([$courseid], $useridparams));
 
         $submissions = [];
 

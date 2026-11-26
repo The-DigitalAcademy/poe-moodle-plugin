@@ -87,6 +87,9 @@ public static function get_students_by_group(int $courseid, int $groupid): array
             ON u.id = gm.userid
         JOIN {groups} g
             ON g.id = gm.groupid
+        JOIN {role_assignments} ra ON ra.userid = u.id
+        JOIN {role} r ON r.id = ra.roleid AND r.shortname = 'student'
+        JOIN {context} ctx ON ctx.id = ra.contextid AND ctx.contextlevel = 50 AND ctx.instanceid = g.courseid
         WHERE g.courseid = ?
           AND gm.groupid = ?
     ";
